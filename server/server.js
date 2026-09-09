@@ -3,6 +3,7 @@ const { Server } = require("socket.io");
 const app = require("./app");
 const { connectDB } = require("./config/db");
 const { PORT, CORS_ORIGIN } = require("./config/env");
+const { registerSocketHandlers } = require("./services/sockets");
 
 async function boot() {
   await connectDB();
@@ -12,27 +13,14 @@ async function boot() {
     cors: { origin: CORS_ORIGIN, credentials: true },
   });
 
-  // Attach io to app so routes can access it via req.app.get("io").
+  // Attach io to app so routes can access it via req.app.get("io") and
+  // submit through the same emitSessionEvent envelope contract.
   app.set("io", io);
 
-  io.on("connection", (socket) => {
-    // Constitution §6: register socket.on(...) handlers BEFORE any await.
-    socket.on("session:join", (payload) => {
-      const { sessionId, role, playerId } = payload || {};
-      if (!sessionId) return;
-      socket.join(`session:${sessionId}`);
-      if (role === "digital" && playerId) {
-        socket.join(`session:${sessionId}:player:${playerId}`);
-      }
-    });
-
-    socket.on("session:leave", (payload) => {
-      const { sessionId, playerId } = payload || {};
-      if (!sessionId) return;
-      socket.leave(`session:${sessionId}`);
-      if (playerId) socket.leave(`session:${sessionId}:player:${playerId}`);
-    });
-  });
+  // Handshake auth + session:join / session:leave handlers.
+  // Constitution §6: registered synchronously before any await inside
+  // connection.
+  registerSocketHandlers(io);
 
   httpServer.listen(PORT, () => {
     // eslint-disable-next-line no-console
