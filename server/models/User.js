@@ -21,10 +21,14 @@ const UserSchema = new Schema(
     },
     displayName: { type: String, required: true, trim: true },
     emailVerified: { type: Boolean, default: false },
+    // No default on `attempts` — Mongoose re-materializes a subdocument
+    // shell on read whenever any nested field has a default, which prevents
+    // $unset from actually clearing the subdoc after a successful verify.
+    // Callers use `(user.verification?.attempts || 0)` to read.
     verification: {
       code: { type: String },
       expiresAt: { type: Date },
-      attempts: { type: Number, default: 0 }, // 5-attempt cap
+      attempts: { type: Number }, // 5-attempt cap (see routes/auth.js)
     },
     language: { type: String, enum: ["es", "en"], default: "es" },
     // Reserved for F4 (Twitch OAuth linking):
