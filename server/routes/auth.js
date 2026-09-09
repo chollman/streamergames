@@ -105,12 +105,17 @@ router.post(
       throw httpError(400, req.t("errors:invalid_code"), { code: "invalid_code" });
     }
 
-    user.emailVerified = true;
-    user.verification = undefined;
-    await user.save();
+    // Wipe verification data completely. Setting the subdoc to undefined
+    // isn't enough in Mongoose 8 because the subschema has defaults that
+    // get re-generated on save. Use $unset so the field is truly gone.
+    const updated = await User.findByIdAndUpdate(
+      user._id,
+      { $set: { emailVerified: true }, $unset: { verification: 1 } },
+      { new: true }
+    );
 
-    const channel = await Channel.findOne({ ownerUserId: user._id });
-    res.json({ user, token: signToken(user._id), channel });
+    const channel = await Channel.findOne({ ownerUserId: updated._id });
+    res.json({ user: updated, token: signToken(updated._id), channel });
   })
 );
 
