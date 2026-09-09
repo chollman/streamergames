@@ -1,0 +1,75 @@
+:root {
+  /* Neutrals — dark theme (default) */
+  --bg-dark: #0f1420;
+  --bg-card: #171d2c;
+  --bg-elevated: #1e2538;
+  --bg-hover: #232b40;
+  --text-primary: #e6ebf5;
+  --text-secondary: #a4adc2;
+  --text-muted: #6b7488;
+  --border: #2b3348;
+
+  /* Brand accents (theme-agnostic) */
+  --amber: #f5a623;
+  --amber-light: #f8bd5c;
+  --amber-dark: #c68414;
+  --red: #d64545;
+  --green: #4caf50;
+  --orange: #f28c1a;
+  --purple: #9264cd;
+
+  /* The Crew suit colors — used by the game module and the overlay */
+  --card-pink: #e95c9e;
+  --card-yellow: #f5c518;
+  --card-green: #4caf50;
+  --card-blue: #4a90e2;
+  --card-rocket: #d64545;
+
+  /* Overlay + spacing */
+  --overlay-soft: rgba(255, 255, 255, 0.04);
+  --overlay-medium: rgba(255, 255, 255, 0.08);
+  --overlay-strong: rgba(255, 255, 255, 0.14);
+  --gap-widgets: 1rem;
+  --on-amber: #ffffff;
+
+  /* Shadows (theme-agnostic) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="light"] {
+  --bg-dark: #f5f7fb;
+  --bg-card: #ffffff;
+  --bg-elevated: #eef1f8;
+  --bg-hover: #e4e8f2;
+  --text-primary: #1a1d29;
+  --text-secondary: #4a5265;
+  --text-muted: #767f96;
+  --border: #d1d6e2;
+
+  --overlay-soft: rgba(0, 0, 0, 0.04);
+  --overlay-medium: rgba(0, 0, 0, 0.08);
+  --overlay-strong: rgba(0, 0, 0, 0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}

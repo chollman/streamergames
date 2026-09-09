@@ -1,0 +1,7 @@
+{
+  "internal": "Internal server error",
+  "not_found": "Not found",
+  "invalid_id": "Invalid identifier",
+  "unauthorized": "Unauthorized",
+  "forbidden": "Forbidden"
+}

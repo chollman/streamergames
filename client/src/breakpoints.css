@@ -1,0 +1,16 @@
+/*
+ * Canonical breakpoints — Constitution §3. Never use raw px for shared layout
+ * transitions; always the token. `@custom-media` is resolved by postcss-custom-media
+ * once we add the postcss config; for now these are documentation.
+ *
+ * --desktop         min-width: 960px   The sidebar⟷drawer split.
+ * --below-desktop   max-width: 959px
+ * --tablet          max-width: 880px   Wide content reflows to one column.
+ * --phone           max-width: 600px   Cards/grids collapse to single column.
+ * --compact         max-width: 480px   Small phones.
+ */
+@custom-media --desktop (min-width: 960px);
+@custom-media --below-desktop (max-width: 959px);
+@custom-media --tablet (max-width: 880px);
+@custom-media --phone (max-width: 600px);
+@custom-media --compact (max-width: 480px);

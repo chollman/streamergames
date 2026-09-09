@@ -1,0 +1,7 @@
+{
+  "internal": "Error interno del servidor",
+  "not_found": "No encontrado",
+  "invalid_id": "Identificador inválido",
+  "unauthorized": "No autenticado",
+  "forbidden": "Prohibido"
+}

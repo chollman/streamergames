@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StreamerGames</title>
+    <script>
+      // Pre-hydration: apply stored theme + language before React mounts, so
+      // there's no flash of the default while Redux hydrates.
+      try {
+        var t = localStorage.getItem("streamergames_theme");
+        if (t === "light" || t === "dark") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+        var l = localStorage.getItem("streamergames_language");
+        if (l === "es" || l === "en") {
+          document.documentElement.setAttribute("lang", l);
+        }
+      } catch (_) {
+        /* private mode / storage disabled */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
