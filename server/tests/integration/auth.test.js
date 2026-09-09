@@ -67,9 +67,12 @@ describe("POST /api/auth/verify-email", () => {
     expect(res.body.user.emailVerified).toBe(true);
     expect(res.body.channel.slug).toBe("streamer-one");
 
-    // Verification fields are wiped after success
-    const user = await User.findOne({ email: "streamer@example.com" });
-    expect(user.verification).toBeUndefined();
+    // Verification fields are wiped after success. Use .lean() so we get
+    // the raw Mongo doc — a hydrated Mongoose document auto-materializes
+    // an empty subdoc shell even after $unset, which is a hydration quirk
+    // and not what actually persists. The DB is what matters.
+    const raw = await User.findOne({ email: "streamer@example.com" }).lean();
+    expect(raw.verification).toBeUndefined();
   });
 
   it("rejects wrong code and increments the attempts counter", async () => {
