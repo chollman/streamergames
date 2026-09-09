@@ -14,5 +14,16 @@
   "too_many_attempts": "Demasiados intentos, esperá un momento",
   "invalid_credentials": "Email o contraseña incorrectos",
   "email_not_verified": "Verificá tu email para iniciar sesión",
-  "user_not_found": "Usuario no encontrado"
+  "user_not_found": "Usuario no encontrado",
+  "channel_not_found": "Canal no encontrado",
+  "session_not_found": "Sesión no encontrada",
+  "not_in_lobby": "La sesión ya empezó",
+  "session_not_in_lobby": "La sesión no acepta más jugadores",
+  "session_full": "La sesión está llena",
+  "not_streamer": "Solo el streamer puede hacer esto",
+  "not_enough_players": "Faltan jugadores para empezar",
+  "not_in_progress": "La sesión no está en curso",
+  "not_seated": "No estás sentado en esta sesión",
+  "wrong_session": "El token no corresponde a esta sesión",
+  "invalid_action": "Acción inválida"
 }

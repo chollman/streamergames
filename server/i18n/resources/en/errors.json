@@ -14,5 +14,16 @@
   "too_many_attempts": "Too many attempts, wait a moment",
   "invalid_credentials": "Invalid email or password",
   "email_not_verified": "Verify your email before logging in",
-  "user_not_found": "User not found"
+  "user_not_found": "User not found",
+  "channel_not_found": "Channel not found",
+  "session_not_found": "Session not found",
+  "not_in_lobby": "Session already started",
+  "session_not_in_lobby": "Session is not accepting new seats",
+  "session_full": "Session is full",
+  "not_streamer": "Only the streamer can do this",
+  "not_enough_players": "Not enough players to start",
+  "not_in_progress": "Session is not in progress",
+  "not_seated": "You are not seated in this session",
+  "wrong_session": "Token does not match this session",
+  "invalid_action": "Invalid action"
 }

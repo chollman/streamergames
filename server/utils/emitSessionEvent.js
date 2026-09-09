@@ -10,20 +10,26 @@ const Session = require("../models/Session");
  * the payload's version and the client's last-known version triggers a
  * `session:resync` and a full state re-emit.
  *
+ * Envelope keys (sessionId / version / timestamp) win over payload — a
+ * caller can never accidentally forge them.
+ *
  * `rooms` is the list of Socket.IO rooms the event should be emitted to:
  *   - Public state → `session:<id>`
  *   - Per-player private state → `session:<id>:player:<playerId>`
+ * NEVER emit private state to a public room.
  *
- * NEVER emit private state to a public room. This is the single rule whose
- * violation breaks the game most severely.
+ * Pass `io=null` to increment version and build the envelope without
+ * actually emitting (useful for REST-only flows and unit tests where socket
+ * infrastructure isn't wired). The envelope is still returned so callers
+ * can persist / return it.
  *
- * @param {Object}   io          Socket.IO server instance
- * @param {string}   sessionId   The Session document _id
- * @param {string}   eventName   Socket event name (e.g. 'session:action-accepted')
- * @param {Object}   payload     Event-specific payload merged into the envelope
- * @param {Object}   opts
- * @param {string[]} opts.rooms  Rooms the event goes to
- * @returns {Promise<Object>}    The envelope that was emitted
+ * @param {Object|null} io          Socket.IO server instance (nullable)
+ * @param {string}      sessionId   The Session document _id
+ * @param {string}      eventName   Socket event name (e.g. 'session:action-accepted')
+ * @param {Object}      payload     Event-specific payload merged into the envelope
+ * @param {Object}      opts
+ * @param {string[]}    opts.rooms  Rooms the event goes to (ignored when io is null)
+ * @returns {Promise<Object>}       The envelope
  */
 async function emitSessionEvent(io, sessionId, eventName, payload, { rooms }) {
   if (!Array.isArray(rooms)) {
@@ -43,9 +49,6 @@ async function emitSessionEvent(io, sessionId, eventName, payload, { rooms }) {
     throw err;
   }
 
-  // Defensive: envelope keys win over payload so a caller can never
-  // accidentally override sessionId / version / timestamp. Payload owns
-  // event-specific fields only.
   const envelope = {
     ...payload,
     sessionId: session._id.toString(),
@@ -53,8 +56,10 @@ async function emitSessionEvent(io, sessionId, eventName, payload, { rooms }) {
     timestamp: new Date().toISOString(),
   };
 
-  for (const room of rooms) {
-    io.to(room).emit(eventName, envelope);
+  if (io) {
+    for (const room of rooms) {
+      io.to(room).emit(eventName, envelope);
+    }
   }
 
   return envelope;
