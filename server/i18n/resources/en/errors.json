@@ -3,5 +3,16 @@
   "not_found": "Not found",
   "invalid_id": "Invalid identifier",
   "unauthorized": "Unauthorized",
-  "forbidden": "Forbidden"
+  "forbidden": "Forbidden",
+  "missing_fields": "Missing required fields",
+  "password_too_short": "Password must be at least 8 characters",
+  "email_in_use": "An account with that email already exists",
+  "verification_sent": "We sent a verification code to your email",
+  "no_verification": "No verification pending for this account",
+  "code_expired": "Verification code expired, request a new one",
+  "invalid_code": "Invalid code",
+  "too_many_attempts": "Too many attempts, wait a moment",
+  "invalid_credentials": "Invalid email or password",
+  "email_not_verified": "Verify your email before logging in",
+  "user_not_found": "User not found"
 }
