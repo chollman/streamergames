@@ -1,4 +1,3 @@
-const { describe, it, expect } = require("vitest");
 const request = require("supertest");
 const app = require("../../app");
 

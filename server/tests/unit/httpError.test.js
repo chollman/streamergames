@@ -1,4 +1,3 @@
-const { describe, it, expect } = require("vitest");
 const httpError = require("../../utils/httpError");
 
 describe("httpError", () => {

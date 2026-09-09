@@ -24,7 +24,8 @@
     "i18next-http-middleware": "^3.6.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.0",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "streamergames": "file:.."
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",

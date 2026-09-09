@@ -1,4 +1,3 @@
-const { describe, it, expect } = require("vitest");
 const Session = require("../../models/Session");
 const emitSessionEvent = require("../../utils/emitSessionEvent");
 
