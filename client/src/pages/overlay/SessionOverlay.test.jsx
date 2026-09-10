@@ -45,10 +45,12 @@ describe("SessionOverlay", () => {
       )
     );
     render(<App />, { wrapper: makeWrapper({ initialEntries: ["/sesion/sess-1/overlay"] }) });
+    // The overlay canvas mounts immediately; the players + trick fill in
+    // once the bootstrap query resolves. Wait for a data-driven element.
     await waitFor(() => {
-      expect(screen.getByTestId("session-overlay")).toBeInTheDocument();
+      expect(screen.getByText("Streamer")).toBeInTheDocument();
     });
-    expect(screen.getByText("Streamer")).toBeInTheDocument();
+    expect(screen.getByTestId("session-overlay")).toBeInTheDocument();
     expect(screen.getByText("Ana")).toBeInTheDocument();
     expect(screen.getByText("Bea")).toBeInTheDocument();
     // Trick has led suit label ("Palo obligado:")
