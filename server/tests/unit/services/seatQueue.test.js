@@ -191,7 +191,11 @@ describe("services/seatQueue — kick / leave", () => {
     const { channel } = await scaffold();
     const a = await enqueue({ channel, nickname: "A" });
     await offerSeat({ entryId: a.entry._id });
-    await acceptSeat({ entryId: a.entry._id, sessionId: "x", playerId: "y" });
+    await acceptSeat({
+      entryId: a.entry._id,
+      sessionId: "507f1f77bcf86cd799439011",
+      playerId: "guest:y",
+    });
     await expect(kickEntry({ entryId: a.entry._id })).rejects.toMatchObject({
       status: 400,
       code: "already_seated",
@@ -206,7 +210,11 @@ describe("services/seatQueue — kick / leave", () => {
 
     const b = await enqueue({ channel, nickname: "B" });
     await offerSeat({ entryId: b.entry._id });
-    await acceptSeat({ entryId: b.entry._id, sessionId: "x", playerId: "y" });
+    await acceptSeat({
+      entryId: b.entry._id,
+      sessionId: "507f1f77bcf86cd799439012",
+      playerId: "guest:y",
+    });
     await expect(leaveQueue({ entryId: b.entry._id })).rejects.toMatchObject({
       status: 400,
       code: "already_seated",
