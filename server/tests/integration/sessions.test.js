@@ -336,3 +336,74 @@ describe("POST /api/sessions/:id/abandon", () => {
     expect(res.body.code).toBe("not_streamer");
   });
 });
+
+describe("POST /api/channels/:slug/sessions/abandon-active", () => {
+  it("closes every lobby / in_progress session on the channel", async () => {
+    const { token, channel } = await registerAndLogin();
+    // Seed two active sessions by writing directly (simulating the pre-guard state).
+    const Session = require("../../models/Session");
+    const Channel = require("../../models/Channel");
+    const ch = await Channel.findOne({ slug: channel.slug });
+    const seat = {
+      seatIndex: 0,
+      playerId: `streamer:${ch.ownerUserId}`,
+      userId: ch.ownerUserId,
+      nickname: "S",
+      role: "streamer",
+      playerType: "physical",
+      status: "seated",
+    };
+    await Session.create({ channel: ch._id, gameId: "the-crew", status: "lobby", seats: [seat], version: 0 });
+    await Session.create({ channel: ch._id, gameId: "the-crew", status: "lobby", seats: [seat], version: 0 });
+
+    const res = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions/abandon-active`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBe(2);
+
+    // A subsequent create now succeeds.
+    const created = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(created.status).toBe(201);
+  });
+
+  it("returns count: 0 when there is nothing to abandon", async () => {
+    const { token, channel } = await registerAndLogin();
+    const res = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions/abandon-active`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBe(0);
+  });
+
+  it("rejects unauthenticated caller", async () => {
+    const { channel } = await registerAndLogin();
+    const res = await request(app).post(`/api/channels/${channel.slug}/sessions/abandon-active`).send({});
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a non-owner", async () => {
+    const { channel } = await registerAndLogin();
+    // Second streamer with their own channel; try to bulk-abandon on the first's channel.
+    const reg = await request(app).post("/api/auth/register").send({
+      email: "other@example.com",
+      password: "supersecret",
+      displayName: "Otro",
+    });
+    const ver = await request(app)
+      .post("/api/auth/verify-email")
+      .send({ email: "other@example.com", code: reg.body.devCode });
+    const otherToken = ver.body.token;
+    const res = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions/abandon-active`)
+      .set("Authorization", `Bearer ${otherToken}`)
+      .send({});
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("not_owner");
+  });
+});

@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   createSession,
-  abandonSession,
+  abandonAllActiveSessions,
   useActiveSessionQuery,
   sessionKeys,
 } from "../../queries/sessions";
@@ -53,7 +53,11 @@ export default function StreamerDashboard() {
     setError(null);
     setBusy(true);
     try {
-      await abandonSession({ sessionId: active.data._id });
+      // Bulk-abandon every active session on the channel: covers the
+      // case where a channel accumulated more than one lobby before the
+      // per-channel guard existed. A single-session abandon would leave
+      // the older ones behind and the next create would still 409.
+      await abandonAllActiveSessions({ channelSlug: channel.slug });
       const { session } = await createSession({ channelSlug: channel.slug });
       queryClient.setQueryData(sessionKeys.active(channel.slug), session);
       navigate(`/sesion/${session._id}`);

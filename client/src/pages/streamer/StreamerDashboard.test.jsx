@@ -93,13 +93,13 @@ describe("StreamerDashboard", () => {
     });
   });
 
-  it("with active: Cancel-and-create abandons then creates + navigates", async () => {
+  it("with active: Cancel-and-create bulk-abandons then creates + navigates", async () => {
     stubActiveSession({ _id: "sess-old", status: "in_progress" });
-    let abandonCalled = null;
+    let bulkAbandonCalled = null;
     server.use(
-      http.post("*/api/sessions/sess-old/abandon", ({ request }) => {
-        abandonCalled = request.url;
-        return HttpResponse.json({ session: { _id: "sess-old", status: "abandoned" } });
+      http.post("*/api/channels/claudio/sessions/abandon-active", ({ request }) => {
+        bulkAbandonCalled = request.url;
+        return HttpResponse.json({ count: 2 });
       }),
       http.post("*/api/channels/claudio/sessions", () =>
         HttpResponse.json({ session: { _id: "sess-new", channel: "ch-1", gameId: "the-crew", status: "lobby", seats: [], version: 0 } })
@@ -119,7 +119,7 @@ describe("StreamerDashboard", () => {
     });
     await user.click(screen.getByRole("button", { name: /cancelar y empezar una nueva/i }));
     await waitFor(() => {
-      expect(abandonCalled).toContain("/api/sessions/sess-old/abandon");
+      expect(bulkAbandonCalled).toContain("/api/channels/claudio/sessions/abandon-active");
     });
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /panel de operador/i })).toBeInTheDocument();

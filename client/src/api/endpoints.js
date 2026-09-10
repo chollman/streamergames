@@ -16,6 +16,7 @@ export const API = {
     Detail: (slug) => `/api/channels/${slug}`,
     CreateSession: (slug) => `/api/channels/${slug}/sessions`,
     ActiveSession: (slug) => `/api/channels/${slug}/sessions/active`,
+    AbandonActiveSessions: (slug) => `/api/channels/${slug}/sessions/abandon-active`,
   },
   Sessions: {
     List: "/api/sessions",

@@ -38,6 +38,26 @@ async function getActiveSessionForChannel(channelId) {
   }).sort({ createdAt: -1 });
 }
 
+// Abandons every lobby / in_progress session on a channel in one shot.
+// Used by the dashboard's "cancel and create new" flow — a channel may
+// have accumulated more than one active session in the wild (created
+// before we added the per-channel guard, or by an admin), so abandoning
+// only the newest still leaves the create call blocked. Returns the
+// number of sessions that were updated.
+async function abandonAllActiveSessionsForChannel({ channel, streamerUser }) {
+  // Belt-and-braces: only the channel owner may bulk-abandon on their
+  // own channel. The route already checks this, but the service is
+  // callable from tests / seeds so we keep the invariant here too.
+  if (channel.ownerUserId.toString() !== streamerUser._id.toString()) {
+    throw httpError(403, "not the channel owner", { code: "not_owner" });
+  }
+  const result = await Session.updateMany(
+    { channel: channel._id, status: { $in: ACTIVE_STATUSES } },
+    { $set: { status: "abandoned", finishedAt: new Date() } }
+  );
+  return { count: result.modifiedCount || 0 };
+}
+
 function guestPlayerId() {
   return `guest:${crypto.randomBytes(6).toString("hex")}`;
 }
@@ -269,5 +289,6 @@ module.exports = {
   guestPlayerId,
   getActiveSessionForChannel,
   abandonSession,
+  abandonAllActiveSessionsForChannel,
   ACTIVE_STATUSES,
 };

@@ -70,6 +70,15 @@ export async function abandonSession({ sessionId }) {
   return res.data;
 }
 
+// Closes every lobby / in_progress session on the channel. The dashboard's
+// "cancel and create" uses this to guarantee the next create succeeds even
+// when a channel accumulated more than one active session (from before
+// the guard existed, or from a bug).
+export async function abandonAllActiveSessions({ channelSlug }) {
+  const res = await api.post(API.Channels.AbandonActiveSessions(channelSlug), {});
+  return res.data;
+}
+
 export async function submitAction({ sessionId, action }) {
   const res = await api.post(API.Sessions.Actions(sessionId), action, guestConfig(sessionId));
   return res.data;

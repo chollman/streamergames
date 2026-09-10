@@ -6,6 +6,7 @@ const Channel = require("../models/Channel");
 const {
   createSessionForStreamer,
   getActiveSessionForChannel,
+  abandonAllActiveSessionsForChannel,
 } = require("../services/sessions");
 
 const router = express.Router();
@@ -47,6 +48,27 @@ router.get(
     const session = await getActiveSessionForChannel(channel._id);
     if (!session) return res.status(204).end();
     res.json({ session });
+  })
+);
+
+// Bulk-abandon: closes every lobby / in_progress session on the channel.
+// The dashboard's "cancel and create new" button hits this before creating
+// so a channel with residual lobbies (created before the per-channel guard
+// existed, or from a bug) can still be recovered in one click.
+router.post(
+  "/:slug/sessions/abandon-active",
+  protect,
+  asyncHandler(async (req, res) => {
+    const channel = await Channel.findOne({ slug: req.params.slug });
+    if (!channel) throw httpError(404, req.t("errors:not_found"), { code: "channel_not_found" });
+    if (channel.ownerUserId.toString() !== req.user._id.toString()) {
+      throw httpError(403, req.t("errors:forbidden"), { code: "not_owner" });
+    }
+    const result = await abandonAllActiveSessionsForChannel({
+      channel,
+      streamerUser: req.user,
+    });
+    res.json(result);
   })
 );
 

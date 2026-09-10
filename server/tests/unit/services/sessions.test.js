@@ -388,3 +388,74 @@ describe("services/sessions — abandonSession", () => {
     expect(again.status).toBe("abandoned");
   });
 });
+
+const {
+  abandonAllActiveSessionsForChannel,
+} = require("../../../services/sessions");
+
+describe("services/sessions — abandonAllActiveSessionsForChannel", () => {
+  it("abandons every lobby / in_progress session on the channel", async () => {
+    const { streamerUser, channel } = await scaffold();
+    // Two active sessions in the channel.
+    const Session = require("../../../models/Session");
+    const seat = {
+      seatIndex: 0,
+      playerId: `streamer:${streamerUser._id}`,
+      userId: streamerUser._id,
+      nickname: streamerUser.displayName,
+      role: "streamer",
+      playerType: "physical",
+      status: "seated",
+    };
+    await Session.create({ channel: channel._id, gameId: "the-crew", status: "lobby", seats: [seat], version: 0 });
+    await Session.create({ channel: channel._id, gameId: "the-crew", status: "lobby", seats: [seat], version: 0 });
+
+    const result = await abandonAllActiveSessionsForChannel({ channel, streamerUser });
+    expect(result.count).toBe(2);
+
+    // No active sessions remain.
+    const remaining = await getActiveSessionForChannel(channel._id);
+    expect(remaining).toBeNull();
+  });
+
+  it("leaves finished / abandoned sessions alone", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const Session = require("../../../models/Session");
+    const seat = {
+      seatIndex: 0,
+      playerId: `streamer:${streamerUser._id}`,
+      userId: streamerUser._id,
+      nickname: streamerUser.displayName,
+      role: "streamer",
+      playerType: "physical",
+      status: "seated",
+    };
+    await Session.create({ channel: channel._id, gameId: "the-crew", status: "finished", seats: [seat], version: 0 });
+    await Session.create({ channel: channel._id, gameId: "the-crew", status: "abandoned", seats: [seat], version: 0 });
+    const result = await abandonAllActiveSessionsForChannel({ channel, streamerUser });
+    expect(result.count).toBe(0);
+  });
+
+  it("returns count 0 when there is nothing to abandon", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const result = await abandonAllActiveSessionsForChannel({ channel, streamerUser });
+    expect(result.count).toBe(0);
+  });
+
+  it("refuses a non-owner", async () => {
+    const { channel } = await scaffold();
+    const other = await User.create({
+      email: "other@x.com",
+      password: "hash",
+      displayName: "Other",
+      emailVerified: true,
+    });
+    try {
+      await abandonAllActiveSessionsForChannel({ channel, streamerUser: other });
+      throw new Error("should have thrown");
+    } catch (err) {
+      expect(err.status).toBe(403);
+      expect(err.code).toBe("not_owner");
+    }
+  });
+});
