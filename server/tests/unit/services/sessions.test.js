@@ -459,3 +459,70 @@ describe("services/sessions — abandonAllActiveSessionsForChannel", () => {
     }
   });
 });
+
+describe("services/sessions — viewForRequest during lobby (no gameState yet)", () => {
+  // Before startSession, session.gameState is null. viewForRequest must
+  // still return a caller-scoped view so the client's SessionView can
+  // dispatch to StreamerOperator / DigitalPlayView / SpectatorView
+  // correctly. Without this the streamer's GET returned view: null and
+  // the client fell through to SpectatorView.
+
+  it("streamer at lobby gets reservedByStreamer + player list from seats", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const session = await createSessionForStreamer({ channel, streamerUser });
+    const view = viewForRequest(session, { kind: "user", userId: streamerUser._id });
+    expect(view).not.toBeNull();
+    expect(view.phase).toBe("lobby");
+    expect(view.reservedByStreamer).toEqual([]);
+    expect(view.players).toHaveLength(1);
+    expect(view.players[0].role).toBe("streamer");
+    expect(view.players[0].nickname).toBe("Claudio");
+  });
+
+  it("streamer sees all seated players in the lobby view", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const session = await createSessionForStreamer({ channel, streamerUser });
+    await joinAsGuest({ sessionId: session._id.toString(), nickname: "Ana" });
+    await joinAsGuest({ sessionId: session._id.toString(), nickname: "Bea" });
+    const fresh = await Session.findById(session._id);
+    const view = viewForRequest(fresh, { kind: "user", userId: streamerUser._id });
+    expect(view.players).toHaveLength(3);
+    const names = view.players.map((p) => p.nickname).sort();
+    expect(names).toEqual(["Ana", "Bea", "Claudio"]);
+  });
+
+  it("digital guest at lobby gets myHand + myPlayerId", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const session = await createSessionForStreamer({ channel, streamerUser });
+    const g = await joinAsGuest({ sessionId: session._id.toString(), nickname: "Ana" });
+    const fresh = await Session.findById(session._id);
+    const view = viewForRequest(fresh, {
+      kind: "guest",
+      playerId: g.seat.playerId,
+      sessionId: fresh._id.toString(),
+    });
+    expect(view.phase).toBe("lobby");
+    expect(view.myHand).toEqual([]);
+    expect(view.myPlayerId).toBe(g.seat.playerId);
+    expect(view).not.toHaveProperty("reservedByStreamer");
+  });
+
+  it("anon at lobby gets a spectator view (no myHand, no reservedByStreamer)", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const session = await createSessionForStreamer({ channel, streamerUser });
+    const view = viewForRequest(session, { kind: "anon" });
+    expect(view.phase).toBe("lobby");
+    expect(view.players).toHaveLength(1);
+    expect(view).not.toHaveProperty("myHand");
+    expect(view).not.toHaveProperty("reservedByStreamer");
+  });
+
+  it("the trick and tricks fields are shaped so the client won't NPE reading them", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const session = await createSessionForStreamer({ channel, streamerUser });
+    const view = viewForRequest(session, { kind: "user", userId: streamerUser._id });
+    expect(view.trick).toEqual({ leaderId: null, ledSuit: null, plays: [] });
+    expect(view.tricks).toEqual([]);
+    expect(view.currentTurnId).toBeNull();
+  });
+});

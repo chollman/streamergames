@@ -3,6 +3,7 @@ const User = require("../models/User");
 const Session = require("../models/Session");
 const { JWT_SECRET } = require("../config/env");
 const { getGame } = require("./games/registry");
+const { viewForRequest } = require("./sessions");
 
 // Handshake auth. Socket.IO calls this once per connection, BEFORE the
 // `connection` event fires — so its awaits are fine (Constitution §6 talks
@@ -74,16 +75,12 @@ function roleForRoomJoin(seat) {
   return "spectator";
 }
 
-// Build the appropriate view for the given caller. Central so tests can
-// exercise it directly.
+// Build the appropriate view for the given caller. Delegates to the same
+// viewForRequest the HTTP GET route uses so the socket's session:state
+// and the initial HTTP bootstrap agree byte-for-byte — including the
+// synthetic lobby view built from seats when gameState is still null.
 function viewForCaller(session, caller) {
-  if (!session.gameState) return null;
-  const game = getGame(session.gameId);
-  const seat = resolveSeat(session, caller);
-  const role = roleForRoomJoin(seat);
-  if (role === "streamer") return game.viewFor(session.gameState, seat.playerId, "streamer");
-  if (role === "digital") return game.viewFor(session.gameState, seat.playerId, "digital");
-  return game.viewFor(session.gameState, null, "spectator");
+  return viewForRequest(session, caller);
 }
 
 // The rooms this caller may join for this session. Public always; private

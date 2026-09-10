@@ -260,20 +260,65 @@ async function submitAction({ sessionId, caller, action, io }) {
   };
 }
 
+// Builds a caller-scoped lobby view from the session's seats when the
+// game hasn't started yet (gameState is still null). The returned shape
+// matches game.viewFor exactly — players list, empty trick, empty tricks
+// history — plus the role-tagged fields the client uses to dispatch to
+// the right sub-page (reservedByStreamer for streamer, myHand + myPlayerId
+// for digital, neither for spectator). Without this the streamer's GET
+// during lobby has no view at all and falls through to SpectatorView.
+function lobbyViewFor(session, callerSeat) {
+  const players = session.seats.map((s) => ({
+    id: s.playerId,
+    nickname: s.nickname,
+    playerType: s.playerType,
+    role: s.role,
+    order: s.seatIndex,
+    handSize: 0,
+    commTokenUsed: false,
+    commCard: null,
+  }));
+  const publicView = {
+    phase: "lobby",
+    players,
+    commanderId: null,
+    trick: { leaderId: null, ledSuit: null, plays: [] },
+    tricks: [],
+    currentTurnId: null,
+  };
+  if (callerSeat && callerSeat.role === "streamer") {
+    return { ...publicView, reservedByStreamer: [] };
+  }
+  if (callerSeat && callerSeat.role === "digital") {
+    return { ...publicView, myHand: [], myPlayerId: callerSeat.playerId };
+  }
+  return publicView;
+}
+
 function viewForRequest(session, caller) {
   const game = getGame(session.gameId);
-  if (!session.gameState) return null;
+
+  // Resolve caller → seat (may be null for anon / non-seated user).
+  let callerSeat = null;
   if (caller.kind === "user") {
-    const seat = session.seats.find(
+    callerSeat = session.seats.find(
       (s) => s.userId && s.userId.toString() === caller.userId.toString()
-    );
-    if (seat && seat.role === "streamer") {
-      return game.viewFor(session.gameState, seat.playerId, "streamer");
-    }
+    ) || null;
+  } else if (caller.kind === "guest") {
+    callerSeat = session.seats.find((s) => s.playerId === caller.playerId) || null;
   }
-  if (caller.kind === "guest") {
-    const seat = session.seats.find((s) => s.playerId === caller.playerId);
-    if (seat) return game.viewFor(session.gameState, seat.playerId, "digital");
+
+  // Lobby: no game state yet; build the view from seats so the client
+  // can still dispatch correctly.
+  if (!session.gameState) {
+    return lobbyViewFor(session, callerSeat);
+  }
+
+  if (callerSeat && callerSeat.role === "streamer") {
+    return game.viewFor(session.gameState, callerSeat.playerId, "streamer");
+  }
+  if (callerSeat && callerSeat.role === "digital") {
+    return game.viewFor(session.gameState, callerSeat.playerId, "digital");
   }
   return game.viewFor(session.gameState, null, "spectator");
 }

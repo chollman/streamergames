@@ -173,6 +173,60 @@ describe("GET /api/sessions/:id — view filtering", () => {
       expect(p).not.toHaveProperty("hand");
     }
   });
+
+  it("streamer GET during lobby (no gameState yet) still returns reservedByStreamer + seats", async () => {
+    const { token, channel } = await registerAndLogin();
+    const created = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const sessionId = created.body.session._id;
+
+    const res = await request(app)
+      .get(`/api/sessions/${sessionId}`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.view).toBeTruthy();
+    expect(res.body.view.phase).toBe("lobby");
+    expect(res.body.view.reservedByStreamer).toEqual([]);
+    expect(res.body.view.players).toHaveLength(1);
+    expect(res.body.view.players[0].role).toBe("streamer");
+  });
+
+  it("digital guest GET during lobby returns myHand + myPlayerId", async () => {
+    const { token, channel } = await registerAndLogin();
+    const created = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const sessionId = created.body.session._id;
+    const joined = await request(app).post(`/api/sessions/${sessionId}/join`).send({ nickname: "Ana" });
+    const guestToken = joined.body.guestToken;
+
+    const res = await request(app)
+      .get(`/api/sessions/${sessionId}`)
+      .set("Authorization", `Bearer ${guestToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.view.phase).toBe("lobby");
+    expect(res.body.view.myHand).toEqual([]);
+    expect(res.body.view.myPlayerId).toBe(joined.body.seat.playerId);
+  });
+
+  it("anon GET during lobby returns spectator view (players from seats, no leak)", async () => {
+    const { token, channel } = await registerAndLogin();
+    const created = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const sessionId = created.body.session._id;
+
+    const res = await request(app).get(`/api/sessions/${sessionId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.view.phase).toBe("lobby");
+    expect(res.body.view).not.toHaveProperty("reservedByStreamer");
+    expect(res.body.view).not.toHaveProperty("myHand");
+    expect(res.body.view.players).toHaveLength(1);
+  });
 });
 
 describe("POST /api/channels/:slug/sessions — active session guard", () => {
