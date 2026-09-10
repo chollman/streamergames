@@ -26,5 +26,12 @@
   "not_seated": "You are not seated in this session",
   "wrong_session": "Token does not match this session",
   "invalid_action": "Invalid action",
-  "active_session_exists": "You already have an active session on this channel"
+  "active_session_exists": "You already have an active session on this channel",
+  "entry_not_found": "We couldn't find your spot in the queue",
+  "entry_not_waiting": "This spot is no longer waiting",
+  "no_active_offer": "No active seat offer for you",
+  "offer_expired": "The seat offer expired",
+  "already_seated": "You're already seated in the session",
+  "wrong_channel": "Token does not match this channel",
+  "nickname_too_long": "Nickname is too long"
 }
