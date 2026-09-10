@@ -411,3 +411,29 @@ body {
 .overlay-trick .game-card { width: 120px; font-size: 2.5rem; }
 .overlay-trick .game-card__rank { font-size: 3rem; }
 .overlay-tricks-count { color: var(--text-muted); text-align: center; font-size: 1.1rem; }
+
+
+/* Copy-URL button visible feedback (LobbyPanel) */
+.share-copy-btn {
+  padding: 0.5rem 1rem;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.share-copy-btn:hover:not(:disabled) { background: var(--bg-hover); }
+.share-copy-btn--copied {
+  background: rgba(76, 175, 80, 0.15);
+  color: var(--green);
+  border-color: rgba(76, 175, 80, 0.45);
+}
+.lobby-panel__blurb {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}

@@ -10,13 +10,11 @@
   "start_session": "Empezar partida",
   "starting": "Empezando…",
   "need_more_players": "Faltan {{need}} jugadores para empezar",
-
   "reserve_title": "Reservá tu mano física",
   "reserve_blurb": "Elegí las {{expected}} cartas que vas a tener físicamente en la mano. El resto se reparte digitalmente al resto de jugadores.",
   "confirm_reserve": "Confirmar reserva",
   "deal_to_digitals": "Repartir a los digitales",
   "submitting": "Enviando…",
-
   "play_title": "Partida en curso",
   "your_turn": "Es tu turno.",
   "waiting_for": "Esperando a {{name}}…",
@@ -26,35 +24,29 @@
   "declare_end_summary": "Declarar fin de partida (opciones)",
   "declare_won": "Ganamos",
   "declare_lost": "Perdimos",
-
   "finished_title": "Partida terminada",
   "finished_result_won": "Ganamos la misión ✨",
   "finished_result_lost": "Perdimos la misión.",
-
   "picker_filter_placeholder": "Filtrar (ej: pink, rocket, 6)…",
   "picker_filter_label": "Filtrar cartas",
   "picker_counter": "{{current}} / {{expected}} seleccionadas",
   "picker_no_matches": "Sin coincidencias.",
-
   "trick_waiting_for_lead": "Esperando la primera carta de la baza…",
   "trick_led_suit_label": "Palo obligado:",
   "trick_leader": "abre la baza",
   "trick_n": "Baza {{n}}",
   "tricks_history_empty": "Todavía no se jugó ninguna baza.",
-
   "suit_pink": "Rosa",
   "suit_yellow": "Amarillo",
   "suit_green": "Verde",
   "suit_blue": "Azul",
   "suit_rocket": "Cohete",
-
   "join_title": "Unirte a la partida",
   "join_blurb": "Elegí un nickname para jugar. No hace falta registrarse.",
   "nickname_label": "Nickname",
   "join_button": "Entrar",
   "joining": "Entrando…",
   "join_generic_error": "No pudimos unirte. Probá de nuevo.",
-
   "digital_lobby_title": "Esperando que arranque la partida",
   "digital_lobby_blurb": "Ya sos parte. Hay {{count}} jugadores. Cuando el streamer arranque, te aparece tu mano.",
   "digital_reserving_title": "El streamer está armando su mano",
@@ -62,7 +54,6 @@
   "digital_playing_title": "Jugando · {{nickname}}",
   "comm_token_used": "Ya usaste tu ficha de comunicación",
   "communicate": "Comunicar (una vez por misión)",
-
   "communicate_title": "Comunicar una carta",
   "communicate_blurb": "Elegí una carta y decí si es la más alta, la única o la más baja de su palo. Los cohetes no se pueden comunicar.",
   "communicate_no_valid_cards": "No tenés cartas comunicables en la mano.",
@@ -72,17 +63,16 @@
   "communicate_pos_lowest": "La más baja",
   "communicate_submit": "Confirmar",
   "communicate_generic_error": "No pudimos registrar la comunicación.",
-
   "spectator_title": "Estás mirando esta partida",
   "spectator_phase_lobby": "En sala de espera.",
   "spectator_phase_reserving": "El streamer está armando su mano.",
   "spectator_phase_trick": "Partida en curso.",
   "spectator_phase_finished": "Partida terminada.",
-
   "overlay_the_crew": "The Crew",
   "cards_left": "{{count}} cartas",
   "tricks_played": "{{count}} bazas jugadas",
-
   "close": "Cerrar",
-  "cancel": "Cancelar"
+  "cancel": "Cancelar",
+  "share_prompt": "Compartí este link con las personas que van a jugar. Cuando entren, van a aparecer en la lista de abajo.",
+  "copied": "¡Copiado!"
 }
