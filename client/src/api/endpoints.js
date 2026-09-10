@@ -6,6 +6,7 @@ export const API = {
   },
   Auth: {
     Register: "/api/auth/register",
+    VerifyEmail: "/api/auth/verify-email",
     Login: "/api/auth/login",
     Logout: "/api/auth/logout",
     Me: "/api/auth/me",
@@ -13,14 +14,13 @@ export const API = {
   Channels: {
     List: "/api/channels",
     Detail: (slug) => `/api/channels/${slug}`,
+    CreateSession: (slug) => `/api/channels/${slug}/sessions`,
   },
   Sessions: {
     List: "/api/sessions",
     Detail: (id) => `/api/sessions/${id}`,
-    Action: (id) => `/api/sessions/${id}/actions`,
-  },
-  SeatQueue: {
-    List: (channelSlug) => `/api/channels/${channelSlug}/seat-queue`,
-    Join: (channelSlug) => `/api/channels/${channelSlug}/seat-queue`,
+    Join: (id) => `/api/sessions/${id}/join`,
+    Start: (id) => `/api/sessions/${id}/start`,
+    Actions: (id) => `/api/sessions/${id}/actions`,
   },
 };

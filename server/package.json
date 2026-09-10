@@ -2,7 +2,7 @@
   "name": "streamergames-server",
   "version": "0.0.1",
   "private": true,
-  "description": "StreamerGames backend \u2014 game sessions, real-time via Socket.IO",
+  "description": "StreamerGames backend — game sessions, real-time via Socket.IO",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
