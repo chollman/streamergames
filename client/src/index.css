@@ -73,3 +73,164 @@ body {
     background 0.15s ease,
     color 0.15s ease;
 }
+
+/* ============ Auth pages (Login / Register / VerifyEmail) ============ */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--amber);
+  letter-spacing: 0.02em;
+}
+
+.auth-subtitle {
+  margin: 0.25rem 0 1.5rem;
+  font-size: 1.5rem;
+}
+
+.auth-body form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.auth-body input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.auth-body input:focus {
+  outline: none;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.15);
+}
+
+.auth-body input[readonly] {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.auth-body small {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.auth-body button[type="submit"] {
+  padding: 0.7rem 1rem;
+  background: var(--amber);
+  color: var(--on-amber);
+  border: 0;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.auth-body button[type="submit"]:hover:not(:disabled) {
+  background: var(--amber-dark);
+}
+
+.auth-body button[type="submit"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-blurb {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.form-error {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  background: rgba(214, 69, 69, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(214, 69, 69, 0.35);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.auth-footer {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.auth-footer a {
+  color: var(--amber);
+  text-decoration: none;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ============ Home (authed landing) ============ */
+
+.home-page {
+  max-width: 720px;
+  margin: 3rem auto;
+  padding: 0 1.5rem;
+}
+
+.home-page h1 {
+  margin: 0 0 0.5rem;
+}
+
+.home-page .muted {
+  color: var(--text-muted);
+  margin: 1rem 0 2rem;
+}
+
+.home-page button {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.home-page button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}

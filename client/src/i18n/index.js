@@ -4,6 +4,8 @@ import esCommon from "./resources/es/common.json";
 import enCommon from "./resources/en/common.json";
 import esErrors from "./resources/es/errors.json";
 import enErrors from "./resources/en/errors.json";
+import esAuth from "./resources/es/auth.json";
+import enAuth from "./resources/en/auth.json";
 
 // Language: pre-hydration script in index.html already set <html lang>, but
 // i18n needs an explicit init.lng because it doesn't read the attribute itself.
@@ -17,12 +19,12 @@ const stored = (() => {
 
 i18n.use(initReactI18next).init({
   resources: {
-    es: { common: esCommon, errors: esErrors },
-    en: { common: enCommon, errors: enErrors },
+    es: { common: esCommon, errors: esErrors, auth: esAuth },
+    en: { common: enCommon, errors: enErrors, auth: enAuth },
   },
   lng: stored === "en" ? "en" : "es",
   fallbackLng: "es",
-  ns: ["common", "errors"],
+  ns: ["common", "errors", "auth"],
   defaultNS: "common",
   interpolation: { escapeValue: false },
 });

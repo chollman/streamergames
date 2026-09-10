@@ -1,11 +1,50 @@
-import { useTranslation } from "react-i18next";
+import { Routes, Route, Navigate } from "react-router-dom";
+import PublicRoute from "./components/routing/PublicRoute";
+import PrivateRoute from "./components/routing/PrivateRoute";
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+import VerifyEmail from "./pages/auth/VerifyEmail";
+import Home from "./pages/Home";
 
+// Route slugs stay Spanish per Constitution §2 (only display text is
+// translated). English exceptions here would only be intentional
+// integration paths — none in F1e.2.
 export default function App() {
-  const { t } = useTranslation();
   return (
-    <main style={{ padding: "2rem" }}>
-      <h1>{t("common:app_name")}</h1>
-      <p>{t("common:coming_soon")}</p>
-    </main>
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/registro"
+        element={
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/verificar-email"
+        element={
+          <PublicRoute>
+            <VerifyEmail />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <PrivateRoute>
+            <Home />
+          </PrivateRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

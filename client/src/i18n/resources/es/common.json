@@ -1,4 +1,8 @@
 {
   "app_name": "StreamerGames",
-  "coming_soon": "Muy pronto."
+  "coming_soon": "Muy pronto.",
+  "hello_name": "Hola, {{name}}",
+  "your_channel": "Tu canal: {{slug}}",
+  "home_coming_soon": "Próximamente vas a poder crear una sesión desde acá.",
+  "logout": "Cerrar sesión"
 }
