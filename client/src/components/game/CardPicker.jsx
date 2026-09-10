@@ -47,7 +47,11 @@ export default function CardPicker({
           className="card-picker__filter"
         />
         {expectedCount != null ? (
-          <div className="card-picker__counter" aria-live="polite">
+          <div
+            className="card-picker__counter"
+            role="status"
+            aria-live="polite"
+          >
             {t("picker_counter", { current: selected.size, expected: expectedCount })}
           </div>
         ) : null}
@@ -59,7 +63,7 @@ export default function CardPicker({
             card={toCard(id)}
             selected={selected.has(id)}
             disabled={disabled}
-            onClick={disabled ? undefined : () => onToggle(id)}
+            onClick={() => onToggle(id)}
           />
         ))}
       </div>
