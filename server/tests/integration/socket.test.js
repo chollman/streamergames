@@ -235,8 +235,16 @@ describe("Socket.IO — action pipeline delivers events to the right rooms", () 
     for (const env of collectorB.items) {
       expect(env.view.myPlayerId).toBe(seatB.playerId);
     }
-    // Streamer is not in any per-player private room (never subscribed).
-    expect(collectorS.items).toHaveLength(0);
+    // The streamer also gets session:you-are — with the streamer view
+    // (reservedByStreamer + full player state). Without this, an action
+    // sent the streamer's local slice into spectator territory and the
+    // client's role dispatch flipped away from StreamerOperator.
+    expect(collectorS.items.length).toBeGreaterThan(0);
+    for (const env of collectorS.items) {
+      expect(env.view).toHaveProperty("reservedByStreamer");
+      // A streamer view never carries myPlayerId + myHand shape.
+      expect(env.view).not.toHaveProperty("myHand");
+    }
 
     // Extra guard: verify A's hand contents don't appear in B's view (and
     // vice versa). If they did, the digital views would have leaked.

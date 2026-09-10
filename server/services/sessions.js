@@ -239,17 +239,21 @@ async function submitAction({ sessionId, caller, action, io }) {
     { rooms: [`session:${session._id}`] }
   );
 
-  // Private per-player events for anything that changed hands (all digital seats).
+  // Private per-player events for everyone whose private view might have
+  // changed. Digitals get their own hand; the streamer gets the full state
+  // (their own hand + reservedByStreamer + all hands). Without this the
+  // streamer would end up with the spectator-shaped view emitted above and
+  // useSessionRole on the client would flip them into SpectatorView.
   for (const s of session.seats) {
-    if (s.role === "digital") {
-      await emitSessionEvent(
-        io,
-        session._id.toString(),
-        "session:you-are",
-        { view: game.viewFor(nextState, s.playerId, "digital") },
-        { rooms: [`session:${session._id}:player:${s.playerId}`] }
-      );
-    }
+    const role = s.role === "streamer" ? "streamer" : s.role === "digital" ? "digital" : null;
+    if (!role) continue;
+    await emitSessionEvent(
+      io,
+      session._id.toString(),
+      "session:you-are",
+      { view: game.viewFor(nextState, s.playerId, role) },
+      { rooms: [`session:${session._id}:player:${s.playerId}`] }
+    );
   }
 
   // Return the caller's own view (their private if digital, full if streamer).
