@@ -4,5 +4,13 @@
   "hello_name": "Hello, {{name}}",
   "your_channel": "Your channel: {{slug}}",
   "home_coming_soon": "Soon you'll be able to start a session from here.",
-  "logout": "Sign out"
+  "logout": "Sign out",
+  "create_session": "Start a new session",
+  "creating_session": "Creating…",
+  "generic_error": "Something went wrong. Please try again.",
+  "session_operator": "Operator panel",
+  "connected": "Connected",
+  "disconnected": "Disconnected",
+  "loading_session": "Loading session…",
+  "session_load_error": "Couldn't load the session."
 }

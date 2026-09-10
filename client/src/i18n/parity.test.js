@@ -5,6 +5,8 @@ import esErrors from "./resources/es/errors.json";
 import enErrors from "./resources/en/errors.json";
 import esAuth from "./resources/es/auth.json";
 import enAuth from "./resources/en/auth.json";
+import esGame from "./resources/es/game.json";
+import enGame from "./resources/en/game.json";
 
 function flatKeys(obj, prefix = "") {
   return Object.entries(obj).flatMap(([k, v]) => {
@@ -21,6 +23,7 @@ describe("i18n resource parity", () => {
     ["common", esCommon, enCommon],
     ["errors", esErrors, enErrors],
     ["auth", esAuth, enAuth],
+    ["game", esGame, enGame],
   ])("es and en have the same keys for %s", (_ns, es, en) => {
     const esKeys = new Set(flatKeys(es));
     const enKeys = new Set(flatKeys(en));

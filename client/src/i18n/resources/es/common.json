@@ -4,5 +4,13 @@
   "hello_name": "Hola, {{name}}",
   "your_channel": "Tu canal: {{slug}}",
   "home_coming_soon": "Próximamente vas a poder crear una sesión desde acá.",
-  "logout": "Cerrar sesión"
+  "logout": "Cerrar sesión",
+  "create_session": "Crear una nueva sesión",
+  "creating_session": "Creando…",
+  "generic_error": "Ocurrió un error. Probá de nuevo.",
+  "session_operator": "Panel de operador",
+  "connected": "Conectado",
+  "disconnected": "Desconectado",
+  "loading_session": "Cargando la sesión…",
+  "session_load_error": "No pudimos cargar la sesión."
 }
