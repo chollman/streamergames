@@ -9,5 +9,18 @@
   "waiting_hint": "We'll ping you as soon as it's your turn.",
   "offered": "The streamer invited you! Confirm to take the seat.",
   "seated": "You're seated in the session.",
-  "leave": "Leave the queue"
+  "leave": "Leave the queue",
+  "panel_title": "Waiting queue",
+  "empty": "No one is in the queue yet.",
+  "invite": "Invite",
+  "inviting": "Inviting…",
+  "kick": "Kick",
+  "accept_seat": "Take the seat",
+  "accepting": "Seating you…",
+  "karma": "karma {{karma}}",
+  "status_waiting": "waiting",
+  "status_offered": "invited",
+  "status_seated": "seated",
+  "status_kicked": "kicked",
+  "status_left": "left"
 }

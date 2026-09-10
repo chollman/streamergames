@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { startSession } from "../../queries/sessions";
+import QueuePanel from "./QueuePanel";
 
 // Session is in lobby: show seats, share URL for guests to join, allow
 // start when we have enough players.
@@ -93,6 +94,8 @@ export default function LobbyPanel({ session }) {
           </ul>
         )}
       </div>
+
+      <QueuePanel session={session} />
 
       <div className="lobby-panel__actions">
         <button

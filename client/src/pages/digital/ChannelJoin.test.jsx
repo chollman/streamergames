@@ -124,6 +124,67 @@ describe("ChannelJoin", () => {
     expect(getQueueToken("claudio")).toBeNull();
   });
 
+  it("when offered: shows Accept button; on click, sets guestToken and navigates to /sesion/:id", async () => {
+    const { setQueueToken } = await import("../../api/sessionStorage");
+    setQueueToken("claudio", "qtoken-x");
+    server.use(
+      http.get("*/api/channels/claudio/queue/me", () =>
+        HttpResponse.json({
+          entry: {
+            _id: "e1",
+            nickname: "Ana",
+            status: "offered",
+            karma: 0,
+            offerExpiresAt: new Date(Date.now() + 30000).toISOString(),
+            offeredSessionId: "sess-1",
+            position: null,
+          },
+        })
+      ),
+      http.post("*/api/channels/claudio/queue/accept", () =>
+        HttpResponse.json(
+          {
+            session: { _id: "sess-1", gameId: "the-crew", status: "lobby", version: 0 },
+            seat: { playerId: "guest:abc", nickname: "Ana", role: "digital", playerType: "digital" },
+            guestToken: "guest-jwt-abc",
+          },
+          { status: 201 }
+        )
+      ),
+      // After navigation SessionView bootstraps.
+      http.get("*/api/sessions/sess-1", () =>
+        HttpResponse.json({
+          session: { _id: "sess-1", gameId: "the-crew", status: "lobby", version: 0 },
+          view: {
+            phase: "lobby",
+            players: [
+              { id: "s", nickname: "Streamer", playerType: "physical", role: "streamer", order: 0, handSize: 0, commTokenUsed: false, commCard: null },
+              { id: "guest:abc", nickname: "Ana", playerType: "digital", role: "digital", order: 1, handSize: 0, commTokenUsed: false, commCard: null },
+            ],
+            commanderId: null,
+            trick: { leaderId: null, ledSuit: null, plays: [] },
+            tricks: [],
+            currentTurnId: null,
+            myHand: [],
+            myPlayerId: "guest:abc",
+          },
+        })
+      )
+    );
+    const user = userEvent.setup();
+    render(<App />, { wrapper: makeWrapper({ initialEntries: ["/canal/claudio"] }) });
+    const acceptBtn = await screen.findByRole("button", { name: /aceptar asiento/i });
+    await user.click(acceptBtn);
+    const { getGuestToken } = await import("../../api/sessionStorage");
+    await waitFor(() => {
+      expect(getGuestToken("sess-1")).toBe("guest-jwt-abc");
+    });
+    // After navigation the digital lands on DigitalPlayView (view has myHand).
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /esperando que arranque la partida/i })).toBeInTheDocument();
+    });
+  });
+
   it("Leave button clears the token and returns to the join form", async () => {
     setQueueToken("claudio", "qtoken-x");
     server.use(

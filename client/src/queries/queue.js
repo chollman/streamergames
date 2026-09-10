@@ -72,3 +72,25 @@ export async function kickFromQueue({ channelSlug, entryId }) {
   const res = await api.delete(API.Channels.QueueKick(channelSlug, entryId));
   return res.data;
 }
+
+// Streamer offers a seat in `sessionId` to the queue entry `entryId`.
+// Server transitions the entry to 'offered' with a TTL.
+export async function offerSeatToEntry({ channelSlug, sessionId, entryId, ttlSeconds = 30 }) {
+  const res = await api.post(
+    API.Channels.QueueOffer(channelSlug, sessionId, entryId),
+    { ttlSeconds }
+  );
+  return res.data;
+}
+
+// Digital accepts the seat they were offered. Uses the queueToken. Returns
+// { session, seat, guestToken } — the caller navigates to /sesion/:id and
+// stores the guestToken keyed by that session.
+export async function acceptSeat({ channelSlug }) {
+  const res = await api.post(
+    API.Channels.QueueAccept(channelSlug),
+    {},
+    queueConfig(channelSlug)
+  );
+  return res.data;
+}

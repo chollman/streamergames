@@ -534,3 +534,56 @@ body {
   color: var(--text-muted);
   margin: 0;
 }
+
+/* -------- F2 · QueuePanel (streamer lobby) ---------- */
+.queue-panel {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg-card);
+}
+.queue-panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+.queue-panel__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.queue-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--bg-elevated);
+  border: 1px solid transparent;
+}
+.queue-panel__row--offered {
+  border-color: var(--amber);
+  background: rgba(245, 166, 35, 0.08);
+}
+.queue-panel__row--seated { opacity: 0.55; }
+.queue-panel__meta {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.queue-panel__nickname { font-weight: 600; }
+.queue-panel__karma,
+.queue-panel__status { font-size: 0.85rem; }
+.queue-panel__actions {
+  display: flex;
+  gap: 0.4rem;
+}
+@media (max-width: 600px) {
+  .queue-panel__row { flex-direction: column; align-items: stretch; }
+  .queue-panel__actions { justify-content: flex-end; }
+}

@@ -9,5 +9,18 @@
   "waiting_hint": "Te avisamos apenas te toque.",
   "offered": "¡El streamer te invitó! Confirmá para sentarte.",
   "seated": "Ya estás sentado en la partida.",
-  "leave": "Salir de la cola"
+  "leave": "Salir de la cola",
+  "panel_title": "Cola de espera",
+  "empty": "No hay nadie en la cola todavía.",
+  "invite": "Invitar",
+  "inviting": "Invitando…",
+  "kick": "Expulsar",
+  "accept_seat": "Aceptar asiento",
+  "accepting": "Sentándote…",
+  "karma": "karma {{karma}}",
+  "status_waiting": "esperando",
+  "status_offered": "invitado",
+  "status_seated": "sentado",
+  "status_kicked": "expulsado",
+  "status_left": "se fue"
 }

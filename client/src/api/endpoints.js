@@ -22,6 +22,9 @@ export const API = {
     QueueMe: (slug) => `/api/channels/${slug}/queue/me`,
     QueueLeave: (slug) => `/api/channels/${slug}/queue/leave`,
     QueueKick: (slug, entryId) => `/api/channels/${slug}/queue/${entryId}`,
+    QueueOffer: (slug, sessionId, entryId) =>
+      `/api/channels/${slug}/sessions/${sessionId}/offer/${entryId}`,
+    QueueAccept: (slug) => `/api/channels/${slug}/queue/accept`,
   },
   Sessions: {
     List: "/api/sessions",

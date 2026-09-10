@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   enqueueSelf,
   leaveQueue,
+  acceptSeat,
   useMyQueueEntry,
   queueKeys,
 } from "../../queries/queue";
@@ -12,6 +13,7 @@ import {
   getQueueToken,
   setQueueToken,
   clearQueueToken,
+  setGuestToken,
 } from "../../api/sessionStorage";
 
 // The digital player's entry point in F2 onwards: /canal/<slug>. Two states:
@@ -23,10 +25,31 @@ import {
 export default function ChannelJoin() {
   const { t } = useTranslation();
   const { slug } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [nickname, setNickname] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  async function onAccept() {
+    if (!slug) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const data = await acceptSeat({ channelSlug: slug });
+      const sessionId = data && data.session && data.session._id;
+      const gToken = data && data.guestToken;
+      if (sessionId && gToken) {
+        setGuestToken(sessionId, gToken);
+        navigate(`/sesion/${sessionId}`);
+      }
+    } catch (err) {
+      const data = (err && err.response && err.response.data) || {};
+      setError(data.message || t("common:generic_error"));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const hasToken = !!getQueueToken(slug);
   const meQuery = useMyQueueEntry(slug, { enabled: hasToken });
@@ -139,9 +162,19 @@ export default function ChannelJoin() {
                 </>
               ) : null}
               {isOffered ? (
-                <p className="channel-join-card__offered">
-                  {t("queue:offered")}
-                </p>
+                <>
+                  <p className="channel-join-card__offered">
+                    {t("queue:offered")}
+                  </p>
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={onAccept}
+                    disabled={busy}
+                  >
+                    {busy ? t("queue:accepting") : t("queue:accept_seat")}
+                  </button>
+                </>
               ) : null}
               {isSeated ? (
                 <p className="channel-join-card__seated">
