@@ -1,0 +1,13 @@
+{
+  "channel_title": "Canal de {{slug}}",
+  "nickname_label": "Elegí tu nickname",
+  "join_queue": "Entrar a la cola",
+  "joining": "Sumándote…",
+  "loading": "Buscando tu lugar…",
+  "you_are_name": "Estás como {{name}}",
+  "position": "Estás en la posición {{n}}",
+  "waiting_hint": "Te avisamos apenas te toque.",
+  "offered": "¡El streamer te invitó! Confirmá para sentarte.",
+  "seated": "Ya estás sentado en la partida.",
+  "leave": "Salir de la cola"
+}

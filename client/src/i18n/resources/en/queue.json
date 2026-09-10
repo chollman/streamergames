@@ -1,0 +1,13 @@
+{
+  "channel_title": "{{slug}}'s channel",
+  "nickname_label": "Pick your nickname",
+  "join_queue": "Join the queue",
+  "joining": "Joining…",
+  "loading": "Finding your spot…",
+  "you_are_name": "You're in as {{name}}",
+  "position": "You're at position {{n}}",
+  "waiting_hint": "We'll ping you as soon as it's your turn.",
+  "offered": "The streamer invited you! Confirm to take the seat.",
+  "seated": "You're seated in the session.",
+  "leave": "Leave the queue"
+}

@@ -17,6 +17,11 @@ export const API = {
     CreateSession: (slug) => `/api/channels/${slug}/sessions`,
     ActiveSession: (slug) => `/api/channels/${slug}/sessions/active`,
     AbandonActiveSessions: (slug) => `/api/channels/${slug}/sessions/abandon-active`,
+    EnqueueSelf: (slug) => `/api/channels/${slug}/queue`,
+    QueueList: (slug) => `/api/channels/${slug}/queue`,
+    QueueMe: (slug) => `/api/channels/${slug}/queue/me`,
+    QueueLeave: (slug) => `/api/channels/${slug}/queue/leave`,
+    QueueKick: (slug, entryId) => `/api/channels/${slug}/queue/${entryId}`,
   },
   Sessions: {
     List: "/api/sessions",

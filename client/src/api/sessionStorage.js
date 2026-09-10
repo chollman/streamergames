@@ -49,3 +49,55 @@ export function clearAllGuestTokens() {
     /* ignore */
   }
 }
+
+// A guest sitting in a channel's SeatQueue gets a queueToken — a JWT bound
+// to (channelSlug, entryId). Keyed by channelSlug so reload restores the
+// entry without re-asking for the nickname. Same pattern as guest session
+// tokens above but scoped to the channel, not a session.
+const QUEUE_KEY = "streamergames_queue_tokens";
+
+function readAllQueue() {
+  try {
+    const raw = localStorage.getItem(QUEUE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeAllQueue(map) {
+  try {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(map));
+  } catch {
+    /* private mode or quota */
+  }
+}
+
+export function getQueueToken(channelSlug) {
+  if (!channelSlug) return null;
+  return readAllQueue()[channelSlug] || null;
+}
+
+export function setQueueToken(channelSlug, token) {
+  if (!channelSlug || !token) return;
+  const all = readAllQueue();
+  all[channelSlug] = token;
+  writeAllQueue(all);
+}
+
+export function clearQueueToken(channelSlug) {
+  if (!channelSlug) return;
+  const all = readAllQueue();
+  delete all[channelSlug];
+  writeAllQueue(all);
+}
+
+export function clearAllQueueTokens() {
+  try {
+    localStorage.removeItem(QUEUE_KEY);
+  } catch {
+    /* ignore */
+  }
+}

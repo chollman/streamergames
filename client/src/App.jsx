@@ -7,6 +7,7 @@ import VerifyEmail from "./pages/auth/VerifyEmail";
 import StreamerDashboard from "./pages/streamer/StreamerDashboard";
 import SessionView from "./pages/SessionView";
 import DigitalJoin from "./pages/digital/DigitalJoin";
+import ChannelJoin from "./pages/digital/ChannelJoin";
 import SessionOverlay from "./pages/overlay/SessionOverlay";
 
 // Route slugs stay Spanish per Constitution §2 (only display text is
@@ -30,6 +31,10 @@ export default function App() {
       {/* Guest join: nickname form for a digital player entering a
           specific session. Public. */}
       <Route path="/entrar/:id" element={<DigitalJoin />} />
+
+      {/* Channel queue entry — a digital lands here, gives a nickname,
+          and waits until the streamer seats them into a session (F2). */}
+      <Route path="/canal/:slug" element={<ChannelJoin />} />
 
       {/* OBS browser-source overlay for a session. Forced-dark inside. */}
       <Route path="/sesion/:id/overlay" element={<SessionOverlay />} />
