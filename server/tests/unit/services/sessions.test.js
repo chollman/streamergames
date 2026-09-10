@@ -526,3 +526,70 @@ describe("services/sessions — viewForRequest during lobby (no gameState yet)",
     expect(view.currentTurnId).toBeNull();
   });
 });
+
+const { seatFromQueueEntry } = require("../../../services/sessions");
+const seatQueueSvc = require("../../../services/seatQueue");
+const SeatQueueEntry = require("../../../models/SeatQueue");
+
+describe("services/sessions — seatFromQueueEntry", () => {
+  async function offeredEntry() {
+    const { streamerUser, channel } = await scaffold();
+    const session = await createSessionForStreamer({ channel, streamerUser });
+    const { entry } = await seatQueueSvc.enqueue({ channel, nickname: "Ana" });
+    await seatQueueSvc.offerSeat({
+      entryId: entry._id,
+      sessionId: session._id,
+      ttlSeconds: 30,
+    });
+    const fresh = await SeatQueueEntry.findById(entry._id);
+    return { session, entry: fresh, streamerUser };
+  }
+
+  it("seats the entry as a digital and marks it seated", async () => {
+    const { session, entry } = await offeredEntry();
+    const res = await seatFromQueueEntry({ entry });
+    expect(res.seat.role).toBe("digital");
+    expect(res.seat.nickname).toBe("Ana");
+    expect(res.seat.playerId).toMatch(/^guest:/);
+    expect(res.guestToken).toEqual(expect.any(String));
+
+    const fresh = await SeatQueueEntry.findById(entry._id);
+    expect(fresh.status).toBe("seated");
+    expect(fresh.seatedSessionId.toString()).toBe(session._id.toString());
+    expect(fresh.playerId).toBe(res.seat.playerId);
+
+    const freshSession = await Session.findById(session._id);
+    expect(freshSession.seats).toHaveLength(2);
+    expect(freshSession.seats.some((s) => s.role === "digital" && s.nickname === "Ana")).toBe(true);
+  });
+
+  it("refuses if the entry is not offered", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const { entry } = await seatQueueSvc.enqueue({ channel, nickname: "Ana" });
+    void streamerUser;
+    await expect(seatFromQueueEntry({ entry })).rejects.toMatchObject({
+      status: 400,
+      code: "no_active_offer",
+    });
+  });
+
+  it("refuses if the target session no longer accepts seats", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const session = await createSessionForStreamer({ channel, streamerUser });
+    const { entry } = await seatQueueSvc.enqueue({ channel, nickname: "Ana" });
+    await seatQueueSvc.offerSeat({
+      entryId: entry._id,
+      sessionId: session._id,
+      ttlSeconds: 30,
+    });
+    // Fill and start to leave lobby.
+    await joinAsGuest({ sessionId: session._id.toString(), nickname: "j1" });
+    await joinAsGuest({ sessionId: session._id.toString(), nickname: "j2" });
+    await startSession({ sessionId: session._id.toString(), streamerUser });
+    const fresh = await SeatQueueEntry.findById(entry._id);
+    await expect(seatFromQueueEntry({ entry: fresh })).rejects.toMatchObject({
+      status: 400,
+      code: "session_not_in_lobby",
+    });
+  });
+});

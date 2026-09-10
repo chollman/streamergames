@@ -4,6 +4,7 @@ const Session = require("../models/Session");
 const httpError = require("../utils/httpError");
 const emitSessionEvent = require("../utils/emitSessionEvent");
 const { getGame } = require("./games/registry");
+const seatQueueSvc = require("./seatQueue");
 const { JWT_SECRET } = require("../config/env");
 
 // Guest tokens are JWTs bound to a specific (sessionId, playerId). They
@@ -122,6 +123,60 @@ async function joinAsGuest({ sessionId, nickname }) {
   await session.save();
 
   const guestToken = signGuestToken({ playerId: seat.playerId, sessionId: session._id.toString() });
+  return { session, seat, guestToken };
+}
+
+// Seat a queue entry as a digital in the session it was invited to. This is
+// the accept flow: the entry is in status 'offered' (with offeredSessionId
+// set), the digital's client calls the accept endpoint, and the server
+// consumes the offer + creates a digital seat + mints a guestToken. Runs
+// checks in this order — cheap validation first, DB writes last — so a
+// full session or an expired offer never leaves an entry half-transitioned.
+async function seatFromQueueEntry({ entry }) {
+  if (entry.status !== "offered") {
+    throw httpError(400, "entry has no active offer", { code: "no_active_offer" });
+  }
+  const targetSessionId = entry.offeredSessionId;
+  if (!targetSessionId) {
+    throw httpError(400, "no target session for this offer", { code: "no_target_session" });
+  }
+  const session = await Session.findById(targetSessionId);
+  if (!session) throw httpError(404, "session not found", { code: "session_not_found" });
+  if (session.status !== "lobby") {
+    throw httpError(400, "session is not accepting new seats", { code: "session_not_in_lobby" });
+  }
+  const game = getGame(session.gameId);
+  const digitalSeats = session.seats.filter((s) => s.playerType === "digital");
+  if (digitalSeats.length + 1 >= game.maxPlayers) {
+    throw httpError(400, "session is full", { code: "session_full" });
+  }
+
+  const seat = {
+    seatIndex: session.seats.length,
+    playerId: guestPlayerId(),
+    userId: entry.userId || null,
+    nickname: entry.nickname,
+    role: "digital",
+    playerType: "digital",
+    status: "seated",
+    joinedAt: new Date(),
+  };
+  session.seats.push(seat);
+  await session.save();
+
+  // Mark the entry seated (also drops karma by 1). If this fails after the
+  // seat was created the session ends up with a phantom seat — acceptable
+  // for MVP; the streamer can kick it.
+  await seatQueueSvc.acceptSeat({
+    entryId: entry._id,
+    sessionId: session._id,
+    playerId: seat.playerId,
+  });
+
+  const guestToken = signGuestToken({
+    playerId: seat.playerId,
+    sessionId: session._id.toString(),
+  });
   return { session, seat, guestToken };
 }
 
@@ -330,6 +385,7 @@ function viewForRequest(session, caller) {
 module.exports = {
   createSessionForStreamer,
   joinAsGuest,
+  seatFromQueueEntry,
   startSession,
   submitAction,
   viewForRequest,

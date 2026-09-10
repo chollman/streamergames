@@ -99,10 +99,10 @@ async function positionFor(channelId, entryId) {
 }
 
 // Marks an entry as offered and sets an expiration N seconds from now.
-// The streamer calls this to invite the top N to accept a seat. The
-// caller is expected to also emit a socket event so the client can
-// react — this service only mutates the DB.
-async function offerSeat({ entryId, ttlSeconds = 30 }) {
+// The streamer calls this to invite someone from the queue to a specific
+// session. The caller is expected to also emit a socket event so the
+// client can react — this service only mutates the DB.
+async function offerSeat({ entryId, sessionId = null, ttlSeconds = 30 }) {
   const entry = await SeatQueueEntry.findById(entryId);
   if (!entry) throw httpError(404, "queue entry not found", { code: "entry_not_found" });
   if (entry.status !== "waiting") {
@@ -110,6 +110,7 @@ async function offerSeat({ entryId, ttlSeconds = 30 }) {
   }
   entry.status = "offered";
   entry.offerExpiresAt = new Date(Date.now() + ttlSeconds * 1000);
+  if (sessionId) entry.offeredSessionId = sessionId;
   await entry.save();
   return entry;
 }
@@ -117,7 +118,10 @@ async function offerSeat({ entryId, ttlSeconds = 30 }) {
 // The person accepts the offer. Marks seated and links to the session
 // seat. Caller (route/service that seats them into the session) provides
 // the sessionId + playerId. Karma drops by 1 as they cash in their wait.
-async function acceptSeat({ entryId, sessionId, playerId }) {
+// If the caller doesn't pass sessionId, the entry's own offeredSessionId
+// is used (that's the common case — accept resolves the target session
+// from the offer stored earlier).
+async function acceptSeat({ entryId, sessionId = null, playerId }) {
   const entry = await SeatQueueEntry.findById(entryId);
   if (!entry) throw httpError(404, "queue entry not found", { code: "entry_not_found" });
   if (entry.status !== "offered") {
@@ -130,9 +134,13 @@ async function acceptSeat({ entryId, sessionId, playerId }) {
     await entry.save();
     throw httpError(410, "offer expired", { code: "offer_expired" });
   }
+  const targetSessionId = sessionId || entry.offeredSessionId;
+  if (!targetSessionId) {
+    throw httpError(400, "no target session for this offer", { code: "no_target_session" });
+  }
   entry.status = "seated";
   entry.offerExpiresAt = null;
-  entry.seatedSessionId = sessionId;
+  entry.seatedSessionId = targetSessionId;
   entry.playerId = playerId;
   entry.karma = entry.karma - 1;
   await entry.save();

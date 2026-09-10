@@ -32,6 +32,9 @@ const SeatQueueEntrySchema = new Schema(
     karma: { type: Number, default: 0 },
     // Set when the streamer offers a seat; clear on accept/expire/decline.
     offerExpiresAt: { type: Date, default: null },
+    // Session the OFFER targets (set when status transitions to 'offered').
+    // Kept once seated so /queue/me can point the client at its session.
+    offeredSessionId: { type: Schema.Types.ObjectId, ref: "Session", default: null },
     // Session they were seated into (only meaningful when status === 'seated').
     seatedSessionId: { type: Schema.Types.ObjectId, ref: "Session", default: null },
     // Playing an entry through to session: which seat's playerId ended up

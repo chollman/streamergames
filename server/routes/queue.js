@@ -8,10 +8,13 @@ const {
   enqueue,
   listActive,
   positionFor,
+  offerSeat,
   kickEntry,
   leaveQueue,
   verifyQueueToken,
 } = require("../services/seatQueue");
+const Session = require("../models/Session");
+const { seatFromQueueEntry } = require("../services/sessions");
 
 const router = express.Router();
 
@@ -103,6 +106,7 @@ router.get(
         status: entry.status,
         karma: entry.karma,
         offerExpiresAt: entry.offerExpiresAt,
+        offeredSessionId: entry.offeredSessionId,
         position,
       },
     });
@@ -151,6 +155,83 @@ router.post(
     }
     const updated = await leaveQueue({ entryId: entry._id });
     res.json({ entry: { _id: updated._id, status: updated.status } });
+  })
+);
+
+// Streamer offers a seat in a specific session to a queue entry. Verifies
+// the caller owns the channel and the session, then transitions the entry
+// to 'offered' with a TTL. The entrant's client picks this up via /me
+// polling (F2c) or via socket seat:offered (F2c later).
+router.post(
+  "/:slug/sessions/:sessionId/offer/:entryId",
+  protect,
+  asyncHandler(async (req, res) => {
+    const channel = await Channel.findOne({ slug: req.params.slug });
+    if (!channel) throw httpError(404, req.t("errors:not_found"), { code: "channel_not_found" });
+    if (channel.ownerUserId.toString() !== req.user._id.toString()) {
+      throw httpError(403, req.t("errors:forbidden"), { code: "not_owner" });
+    }
+    const session = await Session.findById(req.params.sessionId);
+    if (!session) throw httpError(404, req.t("errors:not_found"), { code: "session_not_found" });
+    if (session.channel.toString() !== channel._id.toString()) {
+      throw httpError(403, req.t("errors:forbidden"), { code: "wrong_channel" });
+    }
+    if (session.status !== "lobby") {
+      throw httpError(400, "session is not accepting new seats", { code: "session_not_in_lobby" });
+    }
+    // Guard: the entry must belong to this channel.
+    const SeatQueueEntry = require("../models/SeatQueue");
+    const entry = await SeatQueueEntry.findById(req.params.entryId);
+    if (!entry) throw httpError(404, req.t("errors:not_found"), { code: "entry_not_found" });
+    if (entry.channel.toString() !== channel._id.toString()) {
+      throw httpError(403, req.t("errors:forbidden"), { code: "wrong_channel" });
+    }
+    const ttlSeconds = Number.isFinite(req.body && req.body.ttlSeconds)
+      ? req.body.ttlSeconds
+      : 30;
+    const updated = await offerSeat({
+      entryId: entry._id,
+      sessionId: session._id,
+      ttlSeconds,
+    });
+    res.json({
+      entry: {
+        _id: updated._id,
+        status: updated.status,
+        offerExpiresAt: updated.offerExpiresAt,
+        offeredSessionId: updated.offeredSessionId,
+      },
+    });
+  })
+);
+
+// The entrant accepts an active offer. Auth is by queueToken. Server
+// consumes the offer, creates a digital seat in the offer's session, and
+// returns { session, seat, guestToken } — the client then hits /sesion/:id
+// with the guestToken.
+router.post(
+  "/:slug/queue/accept",
+  asyncHandler(async (req, res) => {
+    const channel = await Channel.findOne({ slug: req.params.slug });
+    if (!channel) throw httpError(404, req.t("errors:not_found"), { code: "channel_not_found" });
+    const auth = req.get("authorization") || "";
+    const match = auth.match(/^Bearer\s+(.+)$/i);
+    const decoded = match ? verifyQueueToken(match[1]) : null;
+    if (!decoded || decoded.channelSlug !== channel.slug) {
+      throw httpError(401, req.t("errors:unauthorized"), { code: "no_token" });
+    }
+    const SeatQueueEntry = require("../models/SeatQueue");
+    const entry = await SeatQueueEntry.findById(decoded.entryId);
+    if (!entry) throw httpError(404, req.t("errors:not_found"), { code: "entry_not_found" });
+    if (entry.channel.toString() !== channel._id.toString()) {
+      throw httpError(403, req.t("errors:forbidden"), { code: "wrong_channel" });
+    }
+    const result = await seatFromQueueEntry({ entry });
+    res.status(201).json({
+      session: result.session,
+      seat: result.seat,
+      guestToken: result.guestToken,
+    });
   })
 );
 

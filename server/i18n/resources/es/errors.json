@@ -33,5 +33,6 @@
   "offer_expired": "La invitación expiró",
   "already_seated": "Ya estás sentado en la sesión",
   "wrong_channel": "El token no corresponde a este canal",
-  "nickname_too_long": "El nickname es demasiado largo"
+  "nickname_too_long": "El nickname es demasiado largo",
+  "no_target_session": "Esta invitación no tiene una sesión asociada"
 }

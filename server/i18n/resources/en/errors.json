@@ -33,5 +33,6 @@
   "offer_expired": "The seat offer expired",
   "already_seated": "You're already seated in the session",
   "wrong_channel": "Token does not match this channel",
-  "nickname_too_long": "Nickname is too long"
+  "nickname_too_long": "Nickname is too long",
+  "no_target_session": "This offer has no target session"
 }
