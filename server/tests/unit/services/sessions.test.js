@@ -285,3 +285,106 @@ describe("services/sessions — viewForRequest privacy", () => {
     }
   });
 });
+
+const {
+  getActiveSessionForChannel,
+  abandonSession,
+} = require("../../../services/sessions");
+
+describe("services/sessions — getActiveSessionForChannel", () => {
+  it("returns null when the channel has no sessions", async () => {
+    const { channel } = await scaffold();
+    const active = await getActiveSessionForChannel(channel._id);
+    expect(active).toBeNull();
+  });
+
+  it("returns the lobby session when one exists", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const created = await createSessionForStreamer({ channel, streamerUser });
+    const active = await getActiveSessionForChannel(channel._id);
+    expect(active).not.toBeNull();
+    expect(active._id.toString()).toBe(created._id.toString());
+    expect(active.status).toBe("lobby");
+  });
+
+  it("ignores finished and abandoned sessions", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const s = await createSessionForStreamer({ channel, streamerUser });
+    s.status = "finished";
+    await s.save();
+    const active = await getActiveSessionForChannel(channel._id);
+    expect(active).toBeNull();
+  });
+});
+
+describe("services/sessions — createSessionForStreamer guard", () => {
+  it("throws 409 with sessionId when an active session already exists", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const first = await createSessionForStreamer({ channel, streamerUser });
+    try {
+      await createSessionForStreamer({ channel, streamerUser });
+      throw new Error("should have thrown");
+    } catch (err) {
+      expect(err.status).toBe(409);
+      expect(err.code).toBe("active_session_exists");
+      expect(err.data && err.data.sessionId).toBe(first._id.toString());
+    }
+  });
+
+  it("allows a new session after the previous one is abandoned", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const first = await createSessionForStreamer({ channel, streamerUser });
+    await abandonSession({ sessionId: first._id.toString(), streamerUser });
+    const second = await createSessionForStreamer({ channel, streamerUser });
+    expect(second._id.toString()).not.toBe(first._id.toString());
+    expect(second.status).toBe("lobby");
+  });
+});
+
+describe("services/sessions — abandonSession", () => {
+  it("streamer abandons their own session", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const s = await createSessionForStreamer({ channel, streamerUser });
+    const after = await abandonSession({ sessionId: s._id.toString(), streamerUser });
+    expect(after.status).toBe("abandoned");
+    expect(after.finishedAt).toBeTruthy();
+  });
+
+  it("throws 404 for unknown session", async () => {
+    const { streamerUser } = await scaffold();
+    const fakeId = "507f1f77bcf86cd799439011";
+    try {
+      await abandonSession({ sessionId: fakeId, streamerUser });
+      throw new Error("should have thrown");
+    } catch (err) {
+      expect(err.status).toBe(404);
+      expect(err.code).toBe("session_not_found");
+    }
+  });
+
+  it("throws 403 when caller is not the streamer of the session", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const s = await createSessionForStreamer({ channel, streamerUser });
+    const otherUser = await User.create({
+      email: "other@x.com",
+      password: "hash",
+      displayName: "Other",
+      emailVerified: true,
+    });
+    try {
+      await abandonSession({ sessionId: s._id.toString(), streamerUser: otherUser });
+      throw new Error("should have thrown");
+    } catch (err) {
+      expect(err.status).toBe(403);
+      expect(err.code).toBe("not_streamer");
+    }
+  });
+
+  it("is idempotent when the session is already finished or abandoned", async () => {
+    const { streamerUser, channel } = await scaffold();
+    const s = await createSessionForStreamer({ channel, streamerUser });
+    await abandonSession({ sessionId: s._id.toString(), streamerUser });
+    const again = await abandonSession({ sessionId: s._id.toString(), streamerUser });
+    expect(again.status).toBe("abandoned");
+  });
+});

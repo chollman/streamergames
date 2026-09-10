@@ -12,5 +12,12 @@
   "connected": "Connected",
   "disconnected": "Disconnected",
   "loading_session": "Loading session…",
-  "session_load_error": "Couldn't load the session."
+  "session_load_error": "Couldn't load the session.",
+  "checking_active_session": "Checking for active session…",
+  "active_session_title": "You have an open session",
+  "active_session_status_lobby": "It's in lobby.",
+  "active_session_status_in_progress": "It's in progress.",
+  "continue_session": "Continue session",
+  "abandon_and_create": "Cancel and start a new one",
+  "working": "Working…"
 }

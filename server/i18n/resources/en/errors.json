@@ -25,5 +25,6 @@
   "not_in_progress": "Session is not in progress",
   "not_seated": "You are not seated in this session",
   "wrong_session": "Token does not match this session",
-  "invalid_action": "Invalid action"
+  "invalid_action": "Invalid action",
+  "active_session_exists": "You already have an active session on this channel"
 }

@@ -174,3 +174,165 @@ describe("GET /api/sessions/:id — view filtering", () => {
     }
   });
 });
+
+describe("POST /api/channels/:slug/sessions — active session guard", () => {
+  it("refuses a second create while an active session exists, returning 409 with sessionId", async () => {
+    const { token, channel } = await registerAndLogin();
+    const first = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(first.status).toBe(201);
+    const firstId = first.body.session._id;
+
+    const second = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(second.status).toBe(409);
+    expect(second.body.code).toBe("active_session_exists");
+    expect(second.body.sessionId).toBe(firstId);
+  });
+
+  it("allows creating a new session after the previous one is abandoned", async () => {
+    const { token, channel } = await registerAndLogin();
+    const first = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const firstId = first.body.session._id;
+
+    const abandon = await request(app)
+      .post(`/api/sessions/${firstId}/abandon`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(abandon.status).toBe(200);
+    expect(abandon.body.session.status).toBe("abandoned");
+
+    const second = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(second.status).toBe(201);
+    expect(second.body.session._id).not.toBe(firstId);
+  });
+});
+
+describe("GET /api/channels/:slug/sessions/active", () => {
+  it("returns 204 when no active session exists", async () => {
+    const { token, channel } = await registerAndLogin();
+    const res = await request(app)
+      .get(`/api/channels/${channel.slug}/sessions/active`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(204);
+  });
+
+  it("returns the session when one is active", async () => {
+    const { token, channel } = await registerAndLogin();
+    const created = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const sessionId = created.body.session._id;
+
+    const res = await request(app)
+      .get(`/api/channels/${channel.slug}/sessions/active`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.session._id).toBe(sessionId);
+    expect(res.body.session.status).toBe("lobby");
+  });
+
+  it("rejects unauthenticated caller", async () => {
+    const { channel } = await registerAndLogin();
+    const res = await request(app).get(`/api/channels/${channel.slug}/sessions/active`);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 for unknown channel slug", async () => {
+    const { token } = await registerAndLogin();
+    const res = await request(app)
+      .get("/api/channels/nope/sessions/active")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("channel_not_found");
+  });
+});
+
+describe("POST /api/sessions/:id/abandon", () => {
+  it("streamer abandons their own lobby session", async () => {
+    const { token, channel } = await registerAndLogin();
+    const created = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const sessionId = created.body.session._id;
+
+    const res = await request(app)
+      .post(`/api/sessions/${sessionId}/abandon`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.session.status).toBe("abandoned");
+    expect(res.body.session.finishedAt).toBeTruthy();
+  });
+
+  it("is idempotent — abandoning an already-abandoned session returns 200", async () => {
+    const { token, channel } = await registerAndLogin();
+    const created = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const sessionId = created.body.session._id;
+    await request(app)
+      .post(`/api/sessions/${sessionId}/abandon`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const again = await request(app)
+      .post(`/api/sessions/${sessionId}/abandon`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    expect(again.status).toBe(200);
+    expect(again.body.session.status).toBe("abandoned");
+  });
+
+  it("rejects unauthenticated caller", async () => {
+    const { token, channel } = await registerAndLogin();
+    const created = await request(app)
+      .post(`/api/channels/${channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+    const sessionId = created.body.session._id;
+    const res = await request(app).post(`/api/sessions/${sessionId}/abandon`).send({});
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a non-streamer caller (403 not_streamer)", async () => {
+    // Streamer A creates a session.
+    const A = await registerAndLogin();
+    const created = await request(app)
+      .post(`/api/channels/${A.channel.slug}/sessions`)
+      .set("Authorization", `Bearer ${A.token}`)
+      .send({});
+    const sessionId = created.body.session._id;
+
+    // Streamer B tries to abandon it. registerAndLogin uses the same
+    // canned email so we need a second helper for a different user.
+    const reg2 = await request(app).post("/api/auth/register").send({
+      email: "otro@example.com",
+      password: "supersecret",
+      displayName: "Otro",
+    });
+    const ver2 = await request(app)
+      .post("/api/auth/verify-email")
+      .send({ email: "otro@example.com", code: reg2.body.devCode });
+    const otherToken = ver2.body.token;
+
+    const res = await request(app)
+      .post(`/api/sessions/${sessionId}/abandon`)
+      .set("Authorization", `Bearer ${otherToken}`)
+      .send({});
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("not_streamer");
+  });
+});

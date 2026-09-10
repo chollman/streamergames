@@ -17,4 +17,18 @@ describe("httpError", () => {
     const err = httpError(400, "bad");
     expect(err.code).toBeUndefined();
   });
+
+  it("carries extra data alongside code via err.data", () => {
+    const err = httpError(409, "conflict", {
+      code: "active_session_exists",
+      sessionId: "abc123",
+    });
+    expect(err.code).toBe("active_session_exists");
+    expect(err.data).toEqual({ sessionId: "abc123" });
+  });
+
+  it("leaves err.data undefined when only code is provided", () => {
+    const err = httpError(400, "bad", { code: "x" });
+    expect(err.data).toBeUndefined();
+  });
 });

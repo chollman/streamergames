@@ -10,6 +10,7 @@ const {
   startSession,
   submitAction,
   viewForRequest,
+  abandonSession,
 } = require("../services/sessions");
 const { JWT_SECRET } = require("../config/env");
 
@@ -64,6 +65,18 @@ router.post(
   protect,
   asyncHandler(async (req, res) => {
     const session = await startSession({
+      sessionId: req.params.id,
+      streamerUser: req.user,
+    });
+    res.json({ session });
+  })
+);
+
+router.post(
+  "/:id/abandon",
+  protect,
+  asyncHandler(async (req, res) => {
+    const session = await abandonSession({
       sessionId: req.params.id,
       streamerUser: req.user,
     });

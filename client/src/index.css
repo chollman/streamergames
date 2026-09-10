@@ -437,3 +437,41 @@ body {
   font-size: 0.95rem;
   line-height: 1.5;
 }
+
+
+/* Active session card on the streamer dashboard */
+.active-session-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.active-session-card__label {
+  margin: 0;
+  font-weight: 600;
+  color: var(--amber);
+  font-size: 1rem;
+}
+.active-session-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media (max-width: 600px) {
+  .active-session-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .active-session-card__actions {
+    justify-content: stretch;
+  }
+  .active-session-card__actions > button {
+    flex: 1;
+  }
+}

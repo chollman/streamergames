@@ -15,12 +15,14 @@ export const API = {
     List: "/api/channels",
     Detail: (slug) => `/api/channels/${slug}`,
     CreateSession: (slug) => `/api/channels/${slug}/sessions`,
+    ActiveSession: (slug) => `/api/channels/${slug}/sessions/active`,
   },
   Sessions: {
     List: "/api/sessions",
     Detail: (id) => `/api/sessions/${id}`,
     Join: (id) => `/api/sessions/${id}/join`,
     Start: (id) => `/api/sessions/${id}/start`,
+    Abandon: (id) => `/api/sessions/${id}/abandon`,
     Actions: (id) => `/api/sessions/${id}/actions`,
   },
 };

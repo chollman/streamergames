@@ -25,5 +25,6 @@
   "not_in_progress": "La sesión no está en curso",
   "not_seated": "No estás sentado en esta sesión",
   "wrong_session": "El token no corresponde a esta sesión",
-  "invalid_action": "Acción inválida"
+  "invalid_action": "Acción inválida",
+  "active_session_exists": "Ya tenés una sesión activa en este canal"
 }

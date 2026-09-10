@@ -12,5 +12,12 @@
   "connected": "Conectado",
   "disconnected": "Desconectado",
   "loading_session": "Cargando la sesión…",
-  "session_load_error": "No pudimos cargar la sesión."
+  "session_load_error": "No pudimos cargar la sesión.",
+  "checking_active_session": "Buscando sesión activa…",
+  "active_session_title": "Tenés una sesión abierta",
+  "active_session_status_lobby": "Está en sala de espera.",
+  "active_session_status_in_progress": "Está en curso.",
+  "continue_session": "Continuar sesión",
+  "abandon_and_create": "Cancelar y empezar una nueva",
+  "working": "Trabajando…"
 }

@@ -1,5 +1,5 @@
 // Central error middleware — must be mounted after all routes.
-// Every error response body is { message, code? } (Constitution §5).
+// Every error response body is { message, code?, ...data? } (Constitution §5).
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
   const status = err.status || 500;
@@ -12,6 +12,7 @@ function errorHandler(err, req, res, next) {
 
   const body = { message };
   if (err.code) body.code = err.code;
+  if (err.data && typeof err.data === "object") Object.assign(body, err.data);
   res.status(status).json(body);
 }
 

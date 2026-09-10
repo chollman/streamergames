@@ -24,11 +24,32 @@ function streamerPlayerId(userId) {
   return `streamer:${userId.toString()}`;
 }
 
+
+// Statuses that count as "active" — a channel can only have one at a time.
+// This matters both for the streamer UX (one session at a time) and to keep
+// resources scoped: we don't want abandoned lobbies from days ago to still
+// be joinable.
+const ACTIVE_STATUSES = ["lobby", "in_progress"];
+
+async function getActiveSessionForChannel(channelId) {
+  return Session.findOne({
+    channel: channelId,
+    status: { $in: ACTIVE_STATUSES },
+  }).sort({ createdAt: -1 });
+}
+
 function guestPlayerId() {
   return `guest:${crypto.randomBytes(6).toString("hex")}`;
 }
 
 async function createSessionForStreamer({ channel, streamerUser, gameId = "the-crew" }) {
+  const existing = await getActiveSessionForChannel(channel._id);
+  if (existing) {
+    throw httpError(409, "channel already has an active session", {
+      code: "active_session_exists",
+      sessionId: existing._id.toString(),
+    });
+  }
   const streamerSeat = {
     seatIndex: 0,
     playerId: streamerPlayerId(streamerUser._id),
@@ -108,6 +129,27 @@ async function startSession({ sessionId, streamerUser }) {
   session.gameState = game.setup({}, playersInput);
   session.status = "in_progress";
   session.startedAt = new Date();
+  await session.save();
+  return session;
+}
+
+async function abandonSession({ sessionId, streamerUser }) {
+  const session = await Session.findById(sessionId);
+  if (!session) throw httpError(404, "session not found", { code: "session_not_found" });
+  const streamerSeat = session.seats.find((s) => s.role === "streamer");
+  if (
+    !streamerSeat ||
+    !streamerSeat.userId ||
+    streamerSeat.userId.toString() !== streamerUser._id.toString()
+  ) {
+    throw httpError(403, "not the streamer", { code: "not_streamer" });
+  }
+  if (session.status === "finished" || session.status === "abandoned") {
+    // Idempotent: already closed.
+    return session;
+  }
+  session.status = "abandoned";
+  session.finishedAt = new Date();
   await session.save();
   return session;
 }
@@ -225,4 +267,7 @@ module.exports = {
   signGuestToken,
   streamerPlayerId,
   guestPlayerId,
+  getActiveSessionForChannel,
+  abandonSession,
+  ACTIVE_STATUSES,
 };
