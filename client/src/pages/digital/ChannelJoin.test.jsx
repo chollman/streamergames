@@ -44,6 +44,13 @@ describe("ChannelJoin", () => {
           },
           { status: 201 }
         )
+      ),
+      // /me starts polling once the token is set; mock it too so MSW
+      // doesn't warn on unhandled requests.
+      http.get("*/api/channels/claudio/queue/me", () =>
+        HttpResponse.json({
+          entry: { _id: "e1", nickname: "Ana", status: "waiting", karma: 0, position: 1 },
+        })
       )
     );
 
@@ -78,10 +85,9 @@ describe("ChannelJoin", () => {
     );
     render(<App />, { wrapper: makeWrapper({ initialEntries: ["/canal/claudio"] }) });
     await waitFor(() => {
-      expect(screen.getByTestId("queue-waiting-card")).toBeInTheDocument();
+      expect(screen.getByText(/estás como beto/i)).toBeInTheDocument();
     });
     expect(screen.queryByLabelText(/nickname/i)).toBeNull();
-    expect(screen.getByText(/estás como beto/i)).toBeInTheDocument();
     expect(screen.getByText(/posición 3/i)).toBeInTheDocument();
   });
 
@@ -132,10 +138,10 @@ describe("ChannelJoin", () => {
     );
     const user = userEvent.setup();
     render(<App />, { wrapper: makeWrapper({ initialEntries: ["/canal/claudio"] }) });
-    await waitFor(() => {
-      expect(screen.getByTestId("queue-waiting-card")).toBeInTheDocument();
-    });
-    await user.click(screen.getByRole("button", { name: /salir de la cola/i }));
+    // Wait for the query to resolve so the Leave button actually renders
+    // (it's gated on entry.status === "waiting" | "offered").
+    const leaveBtn = await screen.findByRole("button", { name: /salir de la cola/i });
+    await user.click(leaveBtn);
     await waitFor(() => {
       expect(getQueueToken("claudio")).toBeNull();
     });
