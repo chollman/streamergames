@@ -51,7 +51,9 @@ describe("SessionOverlay", () => {
       expect(screen.getByText("Streamer")).toBeInTheDocument();
     });
     expect(screen.getByTestId("session-overlay")).toBeInTheDocument();
-    expect(screen.getByText("Ana")).toBeInTheDocument();
+    // Ana + Streamer show in the players list AND in the trick (they played
+    // to it). Bea has no play in the trick, so appears once.
+    expect(screen.getAllByText("Ana").length).toBeGreaterThan(0);
     expect(screen.getByText("Bea")).toBeInTheDocument();
     // Trick has led suit label ("Palo obligado:")
     expect(screen.getByText(/palo obligado/i)).toBeInTheDocument();
