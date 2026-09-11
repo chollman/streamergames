@@ -12,7 +12,8 @@ const { viewForRequest } = require("./sessions");
 // Contract:
 //   - No token → socket.data.caller = { kind: 'anon' }, allow.
 //   - Valid user JWT → { kind: 'user', userId, user }.
-//   - Valid guest JWT → { kind: 'guest', playerId, sessionId }.
+//   - Valid guest JWT (session-scoped) → { kind: 'guest', playerId, sessionId }.
+//   - Valid queue JWT (channel-scoped) → { kind: 'queue-entry', channelSlug, entryId }.
 //   - Malformed / expired token → treated as anon.
 //
 // Actions can't be submitted through sockets in F1 — they go via HTTP —
@@ -31,6 +32,16 @@ async function authenticateSocket(socket, next) {
         kind: "guest",
         playerId: decoded.playerId,
         sessionId: decoded.sessionId,
+      };
+      return next();
+    }
+    if (decoded.kind === "queue") {
+      // Queue-entry socket: bound to a channel + a specific queue entry.
+      // Used to receive seat:offered notifications in the digital's own tab.
+      socket.data.caller = {
+        kind: "queue-entry",
+        channelSlug: decoded.channelSlug,
+        entryId: decoded.entryId,
       };
       return next();
     }
@@ -133,6 +144,61 @@ async function handleSessionLeave(socket, payload) {
   }
 }
 
+// The client detected a version gap (missed one or more envelopes) and
+// asked for a fresh state. Emit session:state to this socket only,
+// carrying the current server version + the caller's own view. Same
+// shape as the initial session:state on join, so applyEnvelope handles
+// both paths through the same code (Constitution §6).
+async function handleSessionResyncRequest(socket, payload) {
+  const { sessionId } = payload || {};
+  if (!sessionId) return;
+  const session = await Session.findById(sessionId);
+  if (!session) return;
+  const caller = socket.data.caller || { kind: "anon" };
+  socket.emit("session:state", {
+    sessionId: session._id.toString(),
+    version: session.version,
+    view: viewForCaller(session, caller),
+    resync: true,
+  });
+}
+
+// Queue rooms:
+//   channel:<slug>:queue                → public queue room. Streamers,
+//     digitals sitting in the queue, and anon spectators all subscribe.
+//     Payload is just "queue changed, refetch" — nothing private.
+//   channel:<slug>:queue:entry:<id>     → per-entry room. The digital's
+//     tab is the only member; receives seat:offered directly. Only a
+//     queue-entry caller whose token matches this channel + entry may
+//     join it.
+function handleQueueJoin(socket, payload) {
+  const { channelSlug } = payload || {};
+  if (!channelSlug) return;
+  socket.join(`channel:${channelSlug}:queue`);
+  const caller = socket.data.caller || {};
+  if (
+    caller.kind === "queue-entry" &&
+    caller.channelSlug === channelSlug &&
+    caller.entryId
+  ) {
+    socket.join(`channel:${channelSlug}:queue:entry:${caller.entryId}`);
+  }
+}
+
+function handleQueueLeave(socket, payload) {
+  const { channelSlug } = payload || {};
+  if (!channelSlug) return;
+  socket.leave(`channel:${channelSlug}:queue`);
+  const caller = socket.data.caller || {};
+  if (
+    caller.kind === "queue-entry" &&
+    caller.channelSlug === channelSlug &&
+    caller.entryId
+  ) {
+    socket.leave(`channel:${channelSlug}:queue:entry:${caller.entryId}`);
+  }
+}
+
 function registerSocketHandlers(io) {
   io.use(authenticateSocket);
   io.on("connection", (socket) => {
@@ -147,6 +213,15 @@ function registerSocketHandlers(io) {
     socket.on("session:leave", (payload) => {
       handleSessionLeave(socket, payload).catch(() => {});
     });
+    socket.on("session:resync-request", (payload) => {
+      handleSessionResyncRequest(socket, payload).catch(() => {});
+    });
+    socket.on("queue:join", (payload) => {
+      try { handleQueueJoin(socket, payload); } catch { /* best effort */ }
+    });
+    socket.on("queue:leave", (payload) => {
+      try { handleQueueLeave(socket, payload); } catch { /* best effort */ }
+    });
   });
 }
 
@@ -157,5 +232,8 @@ module.exports = {
   roomsForCaller,
   handleSessionJoin,
   handleSessionLeave,
+  handleSessionResyncRequest,
+  handleQueueJoin,
+  handleQueueLeave,
   registerSocketHandlers,
 };

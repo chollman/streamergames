@@ -8,17 +8,23 @@ import {
   kickFromQueue,
   queueKeys,
 } from "../../queries/queue";
+import { useQueueSocket } from "../../hooks/useQueueSocket";
 
 // Slot in the streamer's lobby panel that lists waiting/offered queue
-// entries and lets the streamer invite them into the session. Refreshes
-// every 3 seconds via useQueueList. F2c will swap the polling for a
-// socket subscription (`seat-queue:updated`).
+// entries and lets the streamer invite them into the session. Real-time
+// updates arrive over the socket (seat-queue:updated invalidates the
+// cache); useQueueList's 3-second polling stays as a fallback in case
+// the socket drops between events.
 export default function QueuePanel({ session }) {
   const { t } = useTranslation();
   const channel = useSelector((s) => s.auth.channel);
   const queryClient = useQueryClient();
   const slug = channel && channel.slug;
   const sessionId = session.sessionId;
+
+  // Subscribe to the channel's queue events. The hook joins
+  // channel:<slug>:queue and invalidates queueKeys.list on updates.
+  useQueueSocket(slug);
 
   const list = useQueueList(slug, { enabled: !!slug });
   const [busyId, setBusyId] = useState(null);
@@ -30,7 +36,8 @@ export default function QueuePanel({ session }) {
     setBusyId(entryId);
     try {
       await offerSeatToEntry({ channelSlug: slug, sessionId, entryId });
-      // Nudge the list so the entry flips to 'offered' immediately.
+      // Best-effort local nudge — the socket will also push
+      // seat-queue:updated so this invalidate is belt-and-braces.
       await queryClient.invalidateQueries({ queryKey: queueKeys.list(slug) });
     } catch (err) {
       const data = (err && err.response && err.response.data) || {};

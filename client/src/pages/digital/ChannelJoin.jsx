@@ -9,6 +9,7 @@ import {
   useMyQueueEntry,
   queueKeys,
 } from "../../queries/queue";
+import { useQueueSocket } from "../../hooks/useQueueSocket";
 import {
   getQueueToken,
   setQueueToken,
@@ -19,9 +20,11 @@ import {
 // The digital player's entry point in F2 onwards: /canal/<slug>. Two states:
 //   • no queueToken yet → nickname form → enqueue → save token → transition
 //     into the waiting card without a reload.
-//   • have queueToken → poll /queue/me, render the waiting card with
-//     position + status. If the entry disappears (kicked / left) offer to
-//     rejoin.
+//   • have queueToken → subscribe to the channel's queue socket + poll
+//     /queue/me every few seconds as a fallback, render the waiting card
+//     with position + status. seat:offered wakes the tab up immediately
+//     when the streamer clicks Invite. If the entry disappears
+//     (kicked / left) offer to rejoin.
 export default function ChannelJoin() {
   const { t } = useTranslation();
   const { slug } = useParams();
@@ -30,6 +33,11 @@ export default function ChannelJoin() {
   const [nickname, setNickname] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  // Subscribe to the channel queue socket. The hook picks the right token
+  // (queueToken while sitting in the queue, none otherwise), joins the
+  // queue rooms, and invalidates queueKeys.me on seat:offered.
+  useQueueSocket(slug);
 
   async function onAccept() {
     if (!slug) return;
@@ -45,7 +53,15 @@ export default function ChannelJoin() {
       }
     } catch (err) {
       const data = (err && err.response && err.response.data) || {};
-      setError(data.message || t("common:generic_error"));
+      // Offer expired between the streamer's invite and this click. The
+      // server already reset the entry to 'waiting' and the socket update
+      // will refresh /me, so we just show a clear message. Server default
+      // TTL is 5 minutes; this shouldn't happen during a demo.
+      if (data.code === "offer_expired") {
+        setError(t("queue:offer_expired_msg"));
+      } else {
+        setError(data.message || t("common:generic_error"));
+      }
     } finally {
       setBusy(false);
     }
@@ -177,9 +193,28 @@ export default function ChannelJoin() {
                 </>
               ) : null}
               {isSeated ? (
-                <p className="channel-join-card__seated">
-                  {t("queue:seated")}
-                </p>
+                <>
+                  <p className="channel-join-card__seated">
+                    {t("queue:seated")}
+                  </p>
+                  {/* Offer a shortcut back into the seat. The digital's
+                      guestToken for the session is still in localStorage
+                      from when they accepted, so /sesion/:id boots them
+                      straight into DigitalPlayView. If the session has
+                      since ended, SessionView renders the "session ended"
+                      screen instead — either way this is the right button. */}
+                  {(entry.seatedSessionId || entry.offeredSessionId) ? (
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      onClick={() =>
+                        navigate(`/sesion/${entry.seatedSessionId || entry.offeredSessionId}`)
+                      }
+                    >
+                      {t("queue:return_to_session")}
+                    </button>
+                  ) : null}
+                </>
               ) : null}
               {(isWaiting || isOffered) ? (
                 <button

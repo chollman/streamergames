@@ -22,5 +22,7 @@
   "status_offered": "invitado",
   "status_seated": "sentado",
   "status_kicked": "expulsado",
-  "status_left": "se fue"
+  "status_left": "se fue",
+  "offer_expired_msg": "La invitación caducó. Volviste a la cola — esperá la próxima.",
+  "return_to_session": "Volver a la partida"
 }

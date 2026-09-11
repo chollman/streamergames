@@ -22,5 +22,7 @@
   "status_offered": "invited",
   "status_seated": "seated",
   "status_kicked": "kicked",
-  "status_left": "left"
+  "status_left": "left",
+  "offer_expired_msg": "The invitation expired. You're back in the queue — wait for the next one.",
+  "return_to_session": "Back to the session"
 }
