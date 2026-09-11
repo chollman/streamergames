@@ -2,6 +2,7 @@ const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
 const protect = require("../middleware/protect");
 const httpError = require("../utils/httpError");
+const emitQueueEvent = require("../utils/emitQueueEvent");
 const Channel = require("../models/Channel");
 const SeatQueueEntry = require("../models/SeatQueue");
 const {
@@ -17,6 +18,38 @@ const Session = require("../models/Session");
 const { seatFromQueueEntry } = require("../services/sessions");
 
 const router = express.Router();
+
+// Serialize an entry the way both the REST listing and the socket event
+// carry it — same shape so the client's cache-update path is one code path.
+function serializeEntry(e) {
+  return {
+    _id: e._id,
+    nickname: e.nickname,
+    status: e.status,
+    karma: e.karma,
+    offerExpiresAt: e.offerExpiresAt,
+    userId: e.userId,
+    createdAt: e.createdAt,
+  };
+}
+
+// Fires the "queue changed, everyone refetch" event to the public queue
+// room. Payload is a fresh snapshot so subscribers can skip the refetch
+// entirely if they want to. No versioning — the queue isn't gap-sensitive.
+async function emitQueueUpdated(req, channel) {
+  const io = req.app.get("io") || null;
+  if (!io) return;
+  const entries = await listActive(channel._id);
+  emitQueueEvent(
+    io,
+    "seat-queue:updated",
+    {
+      channelSlug: channel.slug,
+      queue: entries.map(serializeEntry),
+    },
+    { rooms: [`channel:${channel.slug}:queue`] }
+  );
+}
 
 // Public: enqueue by nickname. A signed-in user's Authorization header is
 // honored (their entry is tied to their user id) — otherwise it's a guest
@@ -39,6 +72,7 @@ router.post(
       user,
     });
     const position = await positionFor(channel._id, entry._id);
+    await emitQueueUpdated(req, channel);
     res.status(201).json({
       entry: {
         _id: entry._id,
@@ -65,15 +99,7 @@ router.get(
     }
     const entries = await listActive(channel._id);
     res.json({
-      queue: entries.map((e) => ({
-        _id: e._id,
-        nickname: e.nickname,
-        status: e.status,
-        karma: e.karma,
-        offerExpiresAt: e.offerExpiresAt,
-        userId: e.userId,
-        createdAt: e.createdAt,
-      })),
+      queue: entries.map(serializeEntry),
     });
   })
 );
@@ -107,6 +133,9 @@ router.get(
         karma: entry.karma,
         offerExpiresAt: entry.offerExpiresAt,
         offeredSessionId: entry.offeredSessionId,
+        // When the entry is seated, the digital's client uses this id to
+        // offer a "Back to the session" shortcut on /canal/<slug>.
+        seatedSessionId: entry.seatedSessionId,
         position,
       },
     });
@@ -131,6 +160,7 @@ router.delete(
       throw httpError(403, req.t("errors:forbidden"), { code: "wrong_channel" });
     }
     const updated = await kickEntry({ entryId: entry._id });
+    await emitQueueUpdated(req, channel);
     res.json({ entry: { _id: updated._id, status: updated.status } });
   })
 );
@@ -154,14 +184,16 @@ router.post(
       throw httpError(403, req.t("errors:forbidden"), { code: "wrong_channel" });
     }
     const updated = await leaveQueue({ entryId: entry._id });
+    await emitQueueUpdated(req, channel);
     res.json({ entry: { _id: updated._id, status: updated.status } });
   })
 );
 
 // Streamer offers a seat in a specific session to a queue entry. Verifies
 // the caller owns the channel and the session, then transitions the entry
-// to 'offered' with a TTL. The entrant's client picks this up via /me
-// polling (F2c) or via socket seat:offered (F2c later).
+// to 'offered' with a TTL. The entrant's client picks this up via
+// seat:offered (on their per-entry room) and seat-queue:updated (on the
+// public queue room).
 router.post(
   "/:slug/sessions/:sessionId/offer/:entryId",
   protect,
@@ -179,21 +211,45 @@ router.post(
     if (session.status !== "lobby") {
       throw httpError(400, "session is not accepting new seats", { code: "session_not_in_lobby" });
     }
-    // Guard: the entry must belong to this channel.
-    const SeatQueueEntry = require("../models/SeatQueue");
     const entry = await SeatQueueEntry.findById(req.params.entryId);
     if (!entry) throw httpError(404, req.t("errors:not_found"), { code: "entry_not_found" });
     if (entry.channel.toString() !== channel._id.toString()) {
       throw httpError(403, req.t("errors:forbidden"), { code: "wrong_channel" });
     }
+    // 5-minute default. The earlier 30s was too short for a manual smoke
+    // test — an invitee reading the "Take the seat" banner for more than
+    // half a minute would find their offer had silently reset to waiting
+    // by the time they clicked. Real streams can override via body.
     const ttlSeconds = Number.isFinite(req.body && req.body.ttlSeconds)
       ? req.body.ttlSeconds
-      : 30;
+      : 300;
     const updated = await offerSeat({
       entryId: entry._id,
       sessionId: session._id,
       ttlSeconds,
     });
+
+    // Two events fire on offer:
+    //   seat:offered  → only to the entry's per-entry room, so the digital's
+    //                   own tab wakes up immediately (no poll wait).
+    //   seat-queue:updated → the public queue room, so the streamer's panel
+    //                   flips the row to "invited" without a refetch.
+    const io = req.app.get("io") || null;
+    if (io) {
+      emitQueueEvent(
+        io,
+        "seat:offered",
+        {
+          channelSlug: channel.slug,
+          entryId: updated._id.toString(),
+          sessionId: session._id.toString(),
+          offerExpiresAt: updated.offerExpiresAt,
+        },
+        { rooms: [`channel:${channel.slug}:queue:entry:${updated._id}`] }
+      );
+    }
+    await emitQueueUpdated(req, channel);
+
     res.json({
       entry: {
         _id: updated._id,
@@ -220,13 +276,25 @@ router.post(
     if (!decoded || decoded.channelSlug !== channel.slug) {
       throw httpError(401, req.t("errors:unauthorized"), { code: "no_token" });
     }
-    const SeatQueueEntry = require("../models/SeatQueue");
     const entry = await SeatQueueEntry.findById(decoded.entryId);
     if (!entry) throw httpError(404, req.t("errors:not_found"), { code: "entry_not_found" });
     if (entry.channel.toString() !== channel._id.toString()) {
       throw httpError(403, req.t("errors:forbidden"), { code: "wrong_channel" });
     }
-    const result = await seatFromQueueEntry({ entry });
+    let result;
+    try {
+      result = await seatFromQueueEntry({ entry, io: req.app.get("io") || null });
+    } catch (err) {
+      // If the offer expired between the streamer's Invite click and this
+      // Accept, acceptSeat inside seatFromQueueEntry has already reset the
+      // entry to 'waiting' — so the queue actually changed and the
+      // streamer's panel needs to know. Emit before rethrowing.
+      if (err && err.code === "offer_expired") {
+        await emitQueueUpdated(req, channel);
+      }
+      throw err;
+    }
+    await emitQueueUpdated(req, channel);
     res.status(201).json({
       session: result.session,
       seat: result.seat,
