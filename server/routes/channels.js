@@ -2,12 +2,42 @@ const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
 const protect = require("../middleware/protect");
 const httpError = require("../utils/httpError");
+const emitSessionEvent = require("../utils/emitSessionEvent");
+const emitQueueEvent = require("../utils/emitQueueEvent");
 const Channel = require("../models/Channel");
 const {
   createSessionForStreamer,
   getActiveSessionForChannel,
   abandonAllActiveSessionsForChannel,
 } = require("../services/sessions");
+const { listActive } = require("../services/seatQueue");
+
+// Fires the "queue changed" event to the channel's public queue room so
+// every subscriber (streamer's panel, digitals on /canal, spectators)
+// invalidates its local cache. Mirrors the same helper in routes/queue.js
+// — kept inline here to avoid crossing module boundaries for one helper.
+async function emitQueueUpdated(req, channel) {
+  const io = req.app.get("io") || null;
+  if (!io) return;
+  const entries = await listActive(channel._id);
+  emitQueueEvent(
+    io,
+    "seat-queue:updated",
+    {
+      channelSlug: channel.slug,
+      queue: entries.map((e) => ({
+        _id: e._id,
+        nickname: e.nickname,
+        status: e.status,
+        karma: e.karma,
+        offerExpiresAt: e.offerExpiresAt,
+        userId: e.userId,
+        createdAt: e.createdAt,
+      })),
+    },
+    { rooms: [`channel:${channel.slug}:queue`] }
+  );
+}
 
 const router = express.Router();
 
@@ -68,7 +98,26 @@ router.post(
       channel,
       streamerUser: req.user,
     });
-    res.json(result);
+    // Tell each abandoned session's public room that the game is over so
+    // any digital or spectator still viewing it navigates out of the zombie
+    // page instead of staring at stale state. Payload carries channelSlug
+    // so the client can send them back to /canal/<slug>.
+    const io = req.app.get("io") || null;
+    for (const sid of result.sessionIds) {
+      await emitSessionEvent(
+        io,
+        sid,
+        "session:ended",
+        { reason: "abandoned", channelSlug: channel.slug },
+        { rooms: [`session:${sid}`] }
+      );
+    }
+    // seatQueueSvc.cleanupForSession ran inside the service and just
+    // flipped seated entries to 'left' (offered → waiting). Everyone
+    // watching the channel's queue room needs to know so their cached
+    // /queue and /queue/me refresh.
+    await emitQueueUpdated(req, channel);
+    res.json({ count: result.count, sessionIds: result.sessionIds });
   })
 );
 

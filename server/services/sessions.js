@@ -52,11 +52,28 @@ async function abandonAllActiveSessionsForChannel({ channel, streamerUser }) {
   if (channel.ownerUserId.toString() !== streamerUser._id.toString()) {
     throw httpError(403, "not the channel owner", { code: "not_owner" });
   }
-  const result = await Session.updateMany(
+  // Find IDs before the write so the route can emit session:ended per
+  // session — updateMany alone doesn't tell you which docs matched.
+  const active = await Session.find(
     { channel: channel._id, status: { $in: ACTIVE_STATUSES } },
+    { _id: 1 }
+  );
+  const ids = active.map((s) => s._id);
+  if (ids.length === 0) return { count: 0, sessionIds: [] };
+  const result = await Session.updateMany(
+    { _id: { $in: ids } },
     { $set: { status: "abandoned", finishedAt: new Date() } }
   );
-  return { count: result.modifiedCount || 0 };
+  // Free every queue entry that pointed at these sessions — same reason
+  // as abandonSession above. One call per id (a for-loop keeps the API
+  // of cleanupForSession simple and the volume is tiny at MVP).
+  for (const id of ids) {
+    await seatQueueSvc.cleanupForSession(id);
+  }
+  return {
+    count: result.modifiedCount || 0,
+    sessionIds: ids.map((id) => id.toString()),
+  };
 }
 
 function guestPlayerId() {
@@ -91,7 +108,7 @@ async function createSessionForStreamer({ channel, streamerUser, gameId = "the-c
   });
 }
 
-async function joinAsGuest({ sessionId, nickname }) {
+async function joinAsGuest({ sessionId, nickname, io = null }) {
   const session = await Session.findById(sessionId);
   if (!session) throw httpError(404, "session not found", { code: "session_not_found" });
   if (session.status !== "lobby") {
@@ -123,6 +140,9 @@ async function joinAsGuest({ sessionId, nickname }) {
   await session.save();
 
   const guestToken = signGuestToken({ playerId: seat.playerId, sessionId: session._id.toString() });
+  // Broadcast the new seat list to everyone in the session's rooms so
+  // the streamer's lobby panel sees the new digital without a refresh.
+  await broadcastSessionState(io, session._id);
   return { session, seat, guestToken };
 }
 
@@ -132,7 +152,7 @@ async function joinAsGuest({ sessionId, nickname }) {
 // consumes the offer + creates a digital seat + mints a guestToken. Runs
 // checks in this order — cheap validation first, DB writes last — so a
 // full session or an expired offer never leaves an entry half-transitioned.
-async function seatFromQueueEntry({ entry }) {
+async function seatFromQueueEntry({ entry, io = null }) {
   if (entry.status !== "offered") {
     throw httpError(400, "entry has no active offer", { code: "no_active_offer" });
   }
@@ -151,9 +171,16 @@ async function seatFromQueueEntry({ entry }) {
     throw httpError(400, "session is full", { code: "session_full" });
   }
 
+  // Assemble the seat metadata but DON'T push it yet — first consume the
+  // offer. That call throws 410 offer_expired if the TTL elapsed, and
+  // atomically resets the entry to waiting; running it before we mutate
+  // the session avoids the earlier bug where a slow accept left a
+  // phantom seat in the operator panel while the queue entry silently
+  // reverted to waiting.
+  const playerId = guestPlayerId();
   const seat = {
     seatIndex: session.seats.length,
-    playerId: guestPlayerId(),
+    playerId,
     userId: entry.userId || null,
     nickname: entry.nickname,
     role: "digital",
@@ -161,26 +188,34 @@ async function seatFromQueueEntry({ entry }) {
     status: "seated",
     joinedAt: new Date(),
   };
-  session.seats.push(seat);
-  await session.save();
 
-  // Mark the entry seated (also drops karma by 1). If this fails after the
-  // seat was created the session ends up with a phantom seat — acceptable
-  // for MVP; the streamer can kick it.
   await seatQueueSvc.acceptSeat({
     entryId: entry._id,
     sessionId: session._id,
-    playerId: seat.playerId,
+    playerId,
   });
 
+  // Offer was fresh — commit the seat. If this write itself failed for
+  // some reason the entry is left as 'seated' with a matching playerId
+  // but no session seat; far rarer than a phantom seat and the streamer
+  // can kick it if needed.
+  session.seats.push(seat);
+  await session.save();
+
+  // Broadcast the fresh seat list so the streamer's lobby panel (and
+  // any other subscribers to this session) refresh without a bootstrap
+  // fetch. Runs after the DB writes so a failure here doesn't leave
+  // callers thinking the seat wasn't created.
+  await broadcastSessionState(io, session._id);
+
   const guestToken = signGuestToken({
-    playerId: seat.playerId,
+    playerId,
     sessionId: session._id.toString(),
   });
   return { session, seat, guestToken };
 }
 
-async function startSession({ sessionId, streamerUser }) {
+async function startSession({ sessionId, streamerUser, io = null }) {
   const session = await Session.findById(sessionId);
   if (!session) throw httpError(404, "session not found", { code: "session_not_found" });
   if (session.status !== "lobby") {
@@ -205,6 +240,10 @@ async function startSession({ sessionId, streamerUser }) {
   session.status = "in_progress";
   session.startedAt = new Date();
   await session.save();
+  // Broadcast the transition so the streamer's LobbyPanel flips to the
+  // ReservePanel and the digitals move from "waiting for the game to
+  // start" to their reserve view — without either side refreshing.
+  await broadcastSessionState(io, session._id);
   return session;
 }
 
@@ -226,6 +265,9 @@ async function abandonSession({ sessionId, streamerUser }) {
   session.status = "abandoned";
   session.finishedAt = new Date();
   await session.save();
+  // Free the queue entries pointing at this session so a digital who
+  // reopens /canal/<slug> isn't offered a shortcut back to a dead session.
+  await seatQueueSvc.cleanupForSession(session._id);
   return session;
 }
 
@@ -380,6 +422,54 @@ function viewForRequest(session, caller) {
     return game.viewFor(session.gameState, callerSeat.playerId, "digital");
   }
   return game.viewFor(session.gameState, null, "spectator");
+}
+
+// Send a fresh session:state snapshot to every subscriber of the session:
+// spectator view to the public room, and per-player private views to
+// each seated player's private room. Called after any operation that
+// changes the seat list or transitions status (join, accept, start) —
+// game-action mutations use submitAction which fires its own richer
+// envelope. Safe to call with io === null; each emitSessionEvent is
+// then a no-op that still returns a valid envelope.
+async function broadcastSessionState(io, sessionId) {
+  if (!io) return;
+  const session = await Session.findById(sessionId);
+  if (!session) return;
+
+  // Public: spectator view carries the seat list and phase, nothing private.
+  const spectatorView = viewForRequest(session, { kind: "anon" });
+  await emitSessionEvent(
+    io,
+    session._id.toString(),
+    "session:state",
+    { view: spectatorView },
+    { rooms: [`session:${session._id}`] }
+  );
+
+  // Per-player: streamer gets their full view (reservedByStreamer, all
+  // hands post-start); digitals get their own myHand. Same shape the
+  // socket returns on session:join.
+  for (const s of session.seats) {
+    let caller = null;
+    if (s.role === "streamer" && s.userId) {
+      caller = { kind: "user", userId: s.userId.toString() };
+    } else if (s.role === "digital") {
+      caller = {
+        kind: "guest",
+        playerId: s.playerId,
+        sessionId: session._id.toString(),
+      };
+    }
+    if (!caller) continue;
+    const view = viewForRequest(session, caller);
+    await emitSessionEvent(
+      io,
+      session._id.toString(),
+      "session:you-are",
+      { view },
+      { rooms: [`session:${session._id}:player:${s.playerId}`] }
+    );
+  }
 }
 
 module.exports = {

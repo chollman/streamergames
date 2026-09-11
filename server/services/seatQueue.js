@@ -187,6 +187,29 @@ async function bumpWaitingKarma(channelId, delta = 0.1) {
   return { count: res.modifiedCount || 0 };
 }
 
+// When a session ends (abandoned or finished), the queue entries that
+// pointed at it become invalid: a 'seated' entry no longer has a seat,
+// and a still-'offered' entry has an invitation to a session that's gone.
+// Reset both to terminal or waiting states so /queue/me doesn't offer a
+// digital a "Back to the session" button that leads to a dead session,
+// and so an outstanding offer doesn't survive its parent session.
+//   - seated  → left        (they're out; can rejoin the channel queue)
+//   - offered → waiting     (invitation canceled; they wait for the next)
+async function cleanupForSession(sessionId) {
+  const seatedRes = await SeatQueueEntry.updateMany(
+    { seatedSessionId: sessionId, status: "seated" },
+    { $set: { status: "left" } }
+  );
+  const offeredRes = await SeatQueueEntry.updateMany(
+    { offeredSessionId: sessionId, status: "offered" },
+    { $set: { status: "waiting", offerExpiresAt: null, offeredSessionId: null } }
+  );
+  return {
+    seatedFreed: seatedRes.modifiedCount || 0,
+    offeredReset: offeredRes.modifiedCount || 0,
+  };
+}
+
 module.exports = {
   enqueue,
   listWaiting,
@@ -197,6 +220,7 @@ module.exports = {
   kickEntry,
   leaveQueue,
   bumpWaitingKarma,
+  cleanupForSession,
   signQueueToken,
   verifyQueueToken,
 };
