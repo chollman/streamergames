@@ -52,13 +52,16 @@ describe("SessionOverlay", () => {
     });
     expect(screen.getByTestId("session-overlay")).toBeInTheDocument();
     // Ana + Streamer show in the players list AND in the trick (they played
-    // to it). Bea has no play in the trick, so appears once.
+    // to it). Bea appears in the players list AND in the "Turno de Bea"
+    // banner (currentTurnId points at her), so both need getAllByText.
     expect(screen.getAllByText("Ana").length).toBeGreaterThan(0);
-    expect(screen.getByText("Bea")).toBeInTheDocument();
+    expect(screen.getAllByText("Bea").length).toBeGreaterThan(0);
     // Trick has led suit label ("Palo obligado:")
     expect(screen.getByText(/palo obligado/i)).toBeInTheDocument();
-    // Tricks-count message
+    // Tricks-count moved into the header meta but text is the same.
     expect(screen.getByText(/1 bazas jugadas/i)).toBeInTheDocument();
+    // The turn banner shows Bea's turn.
+    expect(screen.getByText(/turno de/i)).toBeInTheDocument();
   });
 
   it("applies data-theme=dark to <html> while mounted (forced-dark)", async () => {

@@ -74,5 +74,13 @@
   "close": "Close",
   "cancel": "Cancel",
   "share_prompt": "Share this link with the people who will play. As they join, they show up in the list below.",
-  "copied": "Copied!"
+  "copied": "Copied!",
+  "session_ended_title": "The session ended",
+  "session_ended_abandoned": "The streamer closed this session before the next one started.",
+  "session_ended_finished": "The game is over. Wait for the next one.",
+  "back_to_channel": "Back to the channel",
+  "back_home": "Back home",
+  "overlay_turn_of": "Turn:",
+  "overlay_trick_won_by": "{{name}} wins the trick",
+  "tricks_won_short": "{{count}} tricks"
 }

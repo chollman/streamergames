@@ -74,5 +74,13 @@
   "close": "Cerrar",
   "cancel": "Cancelar",
   "share_prompt": "Compartí este link con las personas que van a jugar. Cuando entren, van a aparecer en la lista de abajo.",
-  "copied": "¡Copiado!"
+  "copied": "¡Copiado!",
+  "session_ended_title": "La partida terminó",
+  "session_ended_abandoned": "El streamer cerró la sesión antes de empezar la próxima.",
+  "session_ended_finished": "La partida terminó. Esperá la próxima.",
+  "back_to_channel": "Volver al canal",
+  "back_home": "Volver al inicio",
+  "overlay_turn_of": "Turno de",
+  "overlay_trick_won_by": "{{name}} gana la baza",
+  "tricks_won_short": "{{count}} bazas"
 }

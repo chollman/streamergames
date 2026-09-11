@@ -385,6 +385,9 @@ body {
 .overlay-brand { display: flex; align-items: baseline; gap: 1rem; }
 .overlay-brand strong { color: var(--amber); font-size: 1.8rem; letter-spacing: 0.03em; }
 .overlay-brand span { color: var(--text-secondary); font-size: 1.2rem; }
+.overlay-header__meta {
+  display: flex; align-items: center; gap: 1rem;
+}
 .overlay-phase {
   padding: 0.4rem 1rem; background: var(--overlay-medium);
   border-radius: 999px; color: var(--text-secondary); font-size: 1rem;
@@ -396,20 +399,57 @@ body {
   padding: 1.25rem; background: var(--overlay-soft);
   border-radius: 12px; border: 2px solid transparent;
   display: flex; flex-direction: column; gap: 0.5rem;
+  transition: background 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
 }
 .overlay-player__name { font-size: 1.5rem; font-weight: 600; }
-.overlay-player__hand-size { color: var(--text-secondary); }
+.overlay-player__meta {
+  color: var(--text-secondary);
+  display: flex; gap: 0.4rem; flex-wrap: wrap;
+}
+.overlay-player__wins { color: var(--amber-light); font-weight: 500; }
 .overlay-player__comm { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
 .overlay-player__comm > .game-card { width: 60px; aspect-ratio: 2/3; }
-.overlay-player.is-turn { border-color: var(--amber); box-shadow: 0 0 24px rgba(245, 166, 35, 0.35); }
+.overlay-player.is-turn {
+  border-color: var(--amber);
+  box-shadow: 0 0 24px rgba(245, 166, 35, 0.35);
+  animation: overlay-turn-pulse 2s ease-in-out infinite;
+}
 .overlay-player.is-commander { background: rgba(245, 166, 35, 0.1); }
+@keyframes overlay-turn-pulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(245, 166, 35, 0.30); }
+  50%      { box-shadow: 0 0 36px rgba(245, 166, 35, 0.55); }
+}
 .overlay-trick {
   padding: 2rem; background: var(--overlay-soft);
   border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  min-height: 260px; /* keep the layout stable when the winner flash swaps in */
 }
 .overlay-trick .trick__plays > li { width: 120px; }
 .overlay-trick .game-card { width: 120px; font-size: 2.5rem; }
 .overlay-trick .game-card__rank { font-size: 3rem; }
+.overlay-trick-flash {
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  animation: overlay-flash-in 250ms ease-out;
+}
+.overlay-trick-flash__icon { font-size: 4rem; line-height: 1; }
+.overlay-trick-flash__text {
+  color: var(--amber); font-size: 2.2rem; font-weight: 600; letter-spacing: 0.02em;
+}
+@keyframes overlay-flash-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.overlay-footer {
+  min-height: 3.5rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.overlay-turn-banner {
+  color: var(--text-primary); font-size: 1.4rem; letter-spacing: 0.02em;
+  padding: 0.6rem 1.5rem; border-radius: 999px;
+  background: var(--overlay-medium);
+}
+.overlay-turn-banner strong { color: var(--amber); margin-left: 0.25rem; }
+.overlay-turn-banner--finished { color: var(--amber-light); font-weight: 600; }
 .overlay-tricks-count { color: var(--text-muted); text-align: center; font-size: 1.1rem; }
 
 
